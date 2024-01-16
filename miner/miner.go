@@ -18,6 +18,7 @@
 package miner
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"sync"
@@ -162,4 +163,12 @@ func (miner *Miner) getPending() *newPayloadResult {
 	}
 	miner.pending.update(header.Hash(), ret)
 	return ret
+}
+
+func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+	return miner.buildBlockFromTxs(ctx, buildArgs, txs)
+}
+
+func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+	return miner.buildBlockFromBundles(ctx, buildArgs, bundles)
 }
