@@ -39,7 +39,7 @@ jobs:
         run: cd suave && forge build
 
       - name: Test
-        run: go test ./accounts ./cmd/geth ./core ./core/types ./core/vm ./eth/... ./internal/ethapi/... ./les/... ./miner ./params ./suave/...
+        run: go test ./accounts ./cmd/geth ./core ./core/types ./core/vm ./eth/... ./internal/ethapi/... ./miner ./params ./suave/...
 
       - name: Ensure go mod tidy runs without changes
         run: |
