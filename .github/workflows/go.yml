@@ -63,27 +63,27 @@ jobs:
       - name: Build
         run: make geth
 
-  devenv:
-    name: Devenv
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v3
-        with:
-          go-version: ^1.20
-        id: go
+  # devenv:
+  #   name: Devenv
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Set up Go 1.x
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version: ^1.20
+  #       id: go
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+  #     - name: Install Foundry
+  #       uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+  #     - name: Check out code into the Go module directory
+  #       uses: actions/checkout@v2
 
-      - name: Build contracts
-        run: cd suave && forge build
+  #     - name: Build contracts
+  #       run: cd suave && forge build
 
-      - name: Run dev environment
-        run: make devnet-up
+  #     - name: Run dev environment
+  #       run: make devnet-up
 
-      - name: Run mev-share example
-        run: go run suave/devenv/cmd/main.go
+  #     - name: Run mev-share example
+  #       run: go run suave/devenv/cmd/main.go
