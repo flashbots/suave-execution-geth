@@ -3,6 +3,8 @@ package sdk
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -35,8 +37,26 @@ func (a *APIClient) NewSession(ctx context.Context) (string, error) {
 	return id, err
 }
 
-func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
-	var receipt *types.SimulateTransactionResult
+func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*SimulateTransactionResult, error) {
+	var receipt *SimulateTransactionResult
 	err := a.rpc.CallContext(ctx, &receipt, "suavex_addTransaction", sessionId, tx)
 	return receipt, err
+}
+
+func (a *APIClient) BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	var result engine.ExecutionPayloadEnvelope
+	err := a.rpc.CallContext(ctx, &result, "suavex_buildEthBlock", args, txs)
+	return &result, err
+}
+
+func (a *APIClient) BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	var result engine.ExecutionPayloadEnvelope
+	err := a.rpc.CallContext(ctx, &result, "suavex_buildEthBlockFromBundles", args, bundles)
+	return &result, err
+}
+
+func (a *APIClient) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	var result []byte
+	err := a.rpc.CallContext(ctx, &result, "suavex_call", contractAddr, input)
+	return result, err
 }

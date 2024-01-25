@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	builder "github.com/ethereum/go-ethereum/suave/builder/api"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	builder "github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/ethereum/go-ethereum/trie"
 )
 

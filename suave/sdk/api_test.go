@@ -34,6 +34,6 @@ func (n *nullSessionManager) NewSession() (string, error) {
 	return "1", nil
 }
 
-func (n *nullSessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
-	return &types.SimulateTransactionResult{Logs: []*types.SimulatedLog{}}, nil
+func (n *nullSessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*SimulateTransactionResult, error) {
+	return &SimulateTransactionResult{Logs: []*SimulatedLog{}}, nil
 }

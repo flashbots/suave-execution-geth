@@ -9,7 +9,7 @@ import (
 // SessionManager is the backend that manages the session state of the builder API.
 type SessionManager interface {
 	NewSession() (string, error)
-	AddTransaction(sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error)
+	AddTransaction(sessionId string, tx *types.Transaction) (*SimulateTransactionResult, error)
 }
 
 func NewServer(s SessionManager) *Server {
@@ -27,7 +27,7 @@ func (s *Server) NewSession(ctx context.Context) (string, error) {
 	return s.sessionMngr.NewSession()
 }
 
-func (s *Server) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
+func (s *Server) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*SimulateTransactionResult, error) {
 	return s.sessionMngr.AddTransaction(sessionId, tx)
 }
 
@@ -38,6 +38,6 @@ func (s *MockServer) NewSession(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-func (s *MockServer) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
-	return &types.SimulateTransactionResult{}, nil
+func (s *MockServer) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*SimulateTransactionResult, error) {
+	return &SimulateTransactionResult{}, nil
 }
