@@ -41,16 +41,9 @@ type BuildBlockArgs struct {
 	FeeRecipient   common.Address
 	GasLimit       uint64
 	Random         common.Hash
-	Withdrawals    []*Withdrawal
+	Withdrawals    []*types.Withdrawal
 	Extra          []byte
 	FillPending    bool
-}
-
-type Withdrawal struct {
-	Index     uint64         `json:"index"`
-	Validator uint64         `json:"validatorIndex"`
-	Address   common.Address `json:"address"`
-	Amount    uint64         `json:"amount"`
 }
 
 type SBundle struct {

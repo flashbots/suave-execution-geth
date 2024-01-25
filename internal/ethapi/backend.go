@@ -35,6 +35,8 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	suavex "github.com/ethereum/go-ethereum/suavex/sdk"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -99,8 +101,8 @@ type Backend interface {
 	ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
 
 	// SUAVE Execution Methods
-	BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error)
-	BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error)
+	BuildBlockFromTxs(ctx context.Context, buildArgs *suavex.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error)
+	BuildBlockFromBundles(ctx context.Context, buildArgs *suavex.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

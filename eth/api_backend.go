@@ -42,6 +42,8 @@ import (
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	suavex "github.com/ethereum/go-ethereum/suavex/sdk"
 )
 
 // EthAPIBackend implements ethapi.Backend and tracers.Backend for full nodes
@@ -418,11 +420,11 @@ func (b *EthAPIBackend) StateAtTransaction(ctx context.Context, block *types.Blo
 	return b.eth.stateAtTransaction(ctx, block, txIndex, reexec)
 }
 
-func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suavex.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	return b.eth.Miner().BuildBlockFromTxs(ctx, buildArgs, txs)
 }
 
-func (b *EthAPIBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (b *EthAPIBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suavex.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	return b.eth.Miner().BuildBlockFromBundles(ctx, buildArgs, bundles)
 }
 

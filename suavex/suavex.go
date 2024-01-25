@@ -1,4 +1,4 @@
-package builder
+package suavex
 
 import (
 	"context"
@@ -10,8 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	suave "github.com/ethereum/go-ethereum/suave/core"
-	"github.com/ethereum/go-ethereum/suave/sdk"
+	"github.com/ethereum/go-ethereum/suavex/sdk"
 )
 
 // SuavexBackend is the interface required by Suavex endpoint
@@ -19,8 +18,8 @@ type SuavexBackend interface {
 	core.ChainContext
 
 	CurrentHeader() *types.Header
-	BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error)
-	BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error)
+	BuildBlockFromTxs(ctx context.Context, buildArgs *sdk.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error)
+	BuildBlockFromBundles(ctx context.Context, buildArgs *sdk.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 
 	// StateAt returns the state at the given root
@@ -44,10 +43,10 @@ func NewSuavex(b SuavexBackend) *Suavex {
 	}
 }
 
-func (e *Suavex) BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *Suavex) BuildEthBlock(ctx context.Context, buildArgs *sdk.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
-		buildArgs = &types.BuildBlockArgs{
+		buildArgs = &sdk.BuildBlockArgs{
 			Parent:       head.Hash(),
 			Timestamp:    head.Time + uint64(12),
 			FeeRecipient: common.Address{0x42},
@@ -68,10 +67,10 @@ func (e *Suavex) BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockA
 	return engine.BlockToExecutableData(block, profit, nil), nil
 }
 
-func (e *Suavex) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *Suavex) BuildEthBlockFromBundles(ctx context.Context, buildArgs *sdk.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
-		buildArgs = &types.BuildBlockArgs{
+		buildArgs = &sdk.BuildBlockArgs{
 			Parent:       head.Hash(),
 			Timestamp:    head.Time + uint64(12),
 			FeeRecipient: common.Address{0x42},

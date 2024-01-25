@@ -57,7 +57,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	suave_builder "github.com/ethereum/go-ethereum/suave/builder"
+	suave_builder "github.com/ethereum/go-ethereum/suavex"
 )
 
 // Config contains the configuration options of the ETH protocol.

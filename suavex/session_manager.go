@@ -1,4 +1,4 @@
-package builder
+package suavex
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
-	sdk "github.com/ethereum/go-ethereum/suave/sdk"
+	sdk "github.com/ethereum/go-ethereum/suavex/sdk"
 	"github.com/google/uuid"
 )
 

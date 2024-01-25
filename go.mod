@@ -2,7 +2,7 @@ module github.com/ethereum/go-ethereum
 
 go 1.20
 
-replace github.com/ethereum/go-ethereum/suave/sdk => ./suave/sdk
+replace github.com/ethereum/go-ethereum/suavex/sdk => ./suavex/sdk
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.2.0
@@ -23,7 +23,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/dop251/goja v0.0.0-20230806174421-c933cf95e127
 	github.com/ethereum/c-kzg-4844 v0.4.0
-	github.com/ethereum/go-ethereum/suave/sdk v0.0.0-00010101000000-000000000000
+	github.com/ethereum/go-ethereum/suavex/sdk v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.13.0
 	github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5

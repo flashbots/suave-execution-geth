@@ -1,4 +1,4 @@
-module github.com/flashbots/suave-execution-geth/suave/sdk
+module github.com/flashbots/suave-execution-geth/suavex/sdk
 
 go 1.20
 

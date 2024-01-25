@@ -48,6 +48,7 @@ import (
 	"github.com/ethereum/go-ethereum/internal/blocktest"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	suavex "github.com/ethereum/go-ethereum/suavex/sdk"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/require"
@@ -598,12 +599,12 @@ func (b testBackend) ServiceFilter(ctx context.Context, session *bloombits.Match
 	panic("implement me")
 }
 
-func (n *testBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (n *testBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suavex.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
 	return block, big.NewInt(11000), nil
 }
 
-func (n *testBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (n *testBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suavex.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	var txs types.Transactions
 	for _, bundle := range bundles {
 		txs = append(txs, bundle.Txs...)

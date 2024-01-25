@@ -38,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	suavex "github.com/ethereum/go-ethereum/suavex/sdk"
 )
 
 // TestSetFeeDefaults tests the logic for filling in default fee values works as expected.
@@ -366,11 +367,11 @@ func (b *backendMock) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent)
 
 func (b *backendMock) Engine() consensus.Engine { return nil }
 
-func (n *backendMock) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (n *backendMock) BuildBlockFromTxs(ctx context.Context, buildArgs *suavex.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	return nil, nil, nil
 }
 
-func (n *backendMock) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (n *backendMock) BuildBlockFromBundles(ctx context.Context, buildArgs *suavex.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	return nil, nil, nil
 }
 

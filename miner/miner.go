@@ -35,6 +35,8 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+
+	suavex "github.com/ethereum/go-ethereum/suavex/sdk"
 )
 
 // Backend wraps all methods required for mining. Only full node is capable
@@ -246,10 +248,10 @@ func (miner *Miner) BuildPayload(args *BuildPayloadArgs) (*Payload, error) {
 	return miner.worker.buildPayload(args)
 }
 
-func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *suavex.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	return miner.worker.buildBlockFromTxs(ctx, buildArgs, txs)
 }
 
-func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *suavex.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	return miner.worker.buildBlockFromBundles(ctx, buildArgs, bundles)
 }

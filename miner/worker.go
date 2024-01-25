@@ -38,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	suavex "github.com/ethereum/go-ethereum/suavex/sdk"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -1281,7 +1282,7 @@ func (w *worker) commitPendingTxs(work *environment) error {
 	return nil
 }
 
-func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (w *worker) buildBlockFromTxs(ctx context.Context, args *suavex.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	params := &generateParams{
 		timestamp:   args.Timestamp,
 		forceTime:   true,
@@ -1322,7 +1323,7 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	return block, blockProfit, nil
 }
 
-func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (w *worker) buildBlockFromBundles(ctx context.Context, args *suavex.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	// create ephemeral addr and private key for payment txn
 	ephemeralPrivKey, err := crypto.GenerateKey()
 	if err != nil {

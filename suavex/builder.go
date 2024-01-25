@@ -1,4 +1,4 @@
-package builder
+package suavex
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	sdk "github.com/ethereum/go-ethereum/suave/sdk"
+	sdk "github.com/ethereum/go-ethereum/suavex/sdk"
 )
 
 type builder struct {

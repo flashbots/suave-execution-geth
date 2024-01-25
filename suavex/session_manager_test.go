@@ -1,4 +1,4 @@
-package builder
+package suavex
 
 import (
 	"crypto/ecdsa"
