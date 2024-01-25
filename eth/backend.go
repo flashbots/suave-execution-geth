@@ -57,9 +57,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/suave/backends"
 	suave_builder "github.com/ethereum/go-ethereum/suave/builder"
-	suave_builder_api "github.com/ethereum/go-ethereum/suave/sdk"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -307,22 +305,31 @@ func makeExtraData(extra []byte) []byte {
 	return extra
 }
 
+type suavexBackend struct {
+	*EthAPIBackend
+	*core.BlockChain
+}
+
+func (b *suavexBackend) CurrentHeader() *types.Header {
+	return b.BlockChain.CurrentHeader()
+}
+
+func (b *suavexBackend) Engine() consensus.Engine {
+	return b.eth.engine
+}
+
 // APIs return the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *Ethereum) APIs() []rpc.API {
 	apis := ethapi.GetAPIs(s.APIBackend)
 
-	// Append SUAVE-enabled node backend
+	// Append the suavex APIs
 	apis = append(apis, rpc.API{
 		Namespace: "suavex",
-		Service:   backends.NewEthBackendServer(s.APIBackend),
-	})
-
-	sessionManager := suave_builder.NewSessionManager(s.blockchain, &suave_builder.Config{})
-
-	apis = append(apis, rpc.API{
-		Namespace: "suavex",
-		Service:   suave_builder_api.NewServer(sessionManager),
+		Service: suave_builder.NewSuavex(&suavexBackend{
+			EthAPIBackend: s.APIBackend,
+			BlockChain:    s.blockchain,
+		}),
 	})
 
 	// Append any APIs exposed explicitly by the consensus engine

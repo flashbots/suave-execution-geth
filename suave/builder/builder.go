@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	sdk "github.com/ethereum/go-ethereum/suave/sdk"
 )
 
 type builder struct {
@@ -37,7 +38,7 @@ func newBuilder(config *builderConfig) *builder {
 	}
 }
 
-func (b *builder) AddTransaction(txn *types.Transaction) (*types.SimulateTransactionResult, error) {
+func (b *builder) AddTransaction(txn *types.Transaction) (*sdk.SimulateTransactionResult, error) {
 	dummyAuthor := common.Address{}
 
 	vmConfig := vm.Config{
@@ -51,7 +52,7 @@ func (b *builder) AddTransaction(txn *types.Transaction) (*types.SimulateTransac
 	if err != nil {
 		b.state.RevertToSnapshot(snap)
 
-		result := &types.SimulateTransactionResult{
+		result := &sdk.SimulateTransactionResult{
 			Success: false,
 			Error:   err.Error(),
 		}
@@ -61,12 +62,12 @@ func (b *builder) AddTransaction(txn *types.Transaction) (*types.SimulateTransac
 	b.txns = append(b.txns, txn)
 	b.receipts = append(b.receipts, receipt)
 
-	result := &types.SimulateTransactionResult{
+	result := &sdk.SimulateTransactionResult{
 		Success: true,
-		Logs:    []*types.SimulatedLog{},
+		Logs:    []*sdk.SimulatedLog{},
 	}
 	for _, log := range receipt.Logs {
-		result.Logs = append(result.Logs, &types.SimulatedLog{
+		result.Logs = append(result.Logs, &sdk.SimulatedLog{
 			Addr:   log.Address,
 			Topics: log.Topics,
 			Data:   log.Data,

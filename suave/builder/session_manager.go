@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	sdk "github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/google/uuid"
 )
 
@@ -129,7 +130,7 @@ func (s *SessionManager) getSession(sessionId string) (*builder, error) {
 	return session, nil
 }
 
-func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
+func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*sdk.SimulateTransactionResult, error) {
 	builder, err := s.getSession(sessionId)
 	if err != nil {
 		return nil, err
