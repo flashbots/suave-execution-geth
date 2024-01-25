@@ -1,6 +1,6 @@
 module github.com/ethereum/go-ethereum
 
-go 1.21.3
+go 1.20
 
 replace github.com/ethereum/go-ethereum/suave/sdk => ./suave/sdk
 
@@ -23,6 +23,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/dop251/goja v0.0.0-20230806174421-c933cf95e127
 	github.com/ethereum/c-kzg-4844 v0.4.0
+	github.com/ethereum/go-ethereum/suave/sdk v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.13.0
 	github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
@@ -102,7 +103,6 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/deepmap/oapi-codegen v1.6.0 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
-	github.com/ethereum/go-ethereum/suave/sdk v0.0.0-00010101000000-000000000000 // indirect
 	github.com/garslo/gogen v0.0.0-20170306192744-1d203ffc1f61 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
