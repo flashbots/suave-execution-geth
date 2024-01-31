@@ -48,6 +48,15 @@ help: Makefile
 	@echo " Choose a command run in go-ethereum:"
 	@sed -n 's/^#?//p' $< | column -t -s ':' |  sort | sed -e 's/^/ /'
 
+devnet-up:
+	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
+
+devnet-down:
+	docker-compose -f ./suave/devenv/docker-compose.yml down
+
+fmt-contracts:
+	cd suave && forge fmt
+
 release:
 	docker run \
 		--rm \
