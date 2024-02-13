@@ -24,6 +24,7 @@ type BuilderArgs struct {
 	ParentHash   common.Hash
 	FeeRecipient common.Address
 	Extra        []byte
+	BeaconRoot   common.Hash
 }
 
 type Builder struct {
@@ -53,6 +54,7 @@ func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
 		parentHash: args.ParentHash,
 		forceTime:  false,
 		coinbase:   args.FeeRecipient,
+		beaconRoot: &args.BeaconRoot,
 		extra:      args.Extra,
 	}
 	env, err := b.wrk.prepareWork(workerParams)

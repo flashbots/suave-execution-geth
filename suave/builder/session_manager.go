@@ -93,6 +93,7 @@ func (s *SessionManager) NewSession(ctx context.Context, args *api.BuildBlockArg
 
 	builderArgs := &miner.BuilderArgs{
 		ParentHash: args.Parent,
+		BeaconRoot: args.BeaconRoot,
 	}
 
 	id := uuid.New().String()[:7]

@@ -26,6 +26,7 @@ type BuildBlockArgs struct {
 	Random         common.Hash
 	Withdrawals    []*types.Withdrawal
 	Extra          []byte
+	BeaconRoot     common.Hash
 	FillPending    bool
 }
 
