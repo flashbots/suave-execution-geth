@@ -20,6 +20,7 @@ type BuildBlockArgs struct {
 	Withdrawals    []*Withdrawal
 	ParentBeaconBlockRoot common.Hash
 	Extra          []byte
+	BeaconRoot     common.Hash
 	FillPending    bool
 }
 
