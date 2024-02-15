@@ -18,6 +18,7 @@ package miner
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"math/big"
@@ -25,7 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
@@ -1328,6 +1331,30 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	return block, blockProfit, nil
 }
 
+func (w *worker) buildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	block, profit, err := w.buildBlockFromBundles(ctx, buildArgs, bundles)
+	if err != nil {
+		return nil, err
+	}
+	exeData := engine.BlockToExecutableData(block, profit, nil)
+	filteredBlobs := w.getBlobsForTxs(block.Transactions())
+	exeData.BlobsBundle = &filteredBlobs
+
+	return exeData, nil
+}
+
+func (w *worker) buildEthBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	block, profit, err := w.buildBlockFromTxs(ctx, buildArgs, txs)
+	if err != nil {
+		return nil, err
+	}
+	exeData := engine.BlockToExecutableData(block, profit, nil)
+	filteredBlobs := w.getBlobsForTxs(block.Transactions())
+	exeData.BlobsBundle = &filteredBlobs
+
+	return exeData, nil
+}
+
 func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	// create ephemeral addr and private key for payment txn
 	ephemeralPrivKey, err := crypto.GenerateKey()
@@ -1445,4 +1472,42 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		return nil, nil, err
 	}
 	return block, proposerProfit, nil
+}
+
+func (w *worker) getBlobsForTxs(txs types.Transactions) engine.BlobsBundleV1 {
+	// Obtain blob hashes from txs
+	var blobHashes []common.Hash
+	for _, tx := range txs {
+		blobHashes = append(blobHashes, tx.BlobHashes()...)
+	}
+
+	bundle := engine.BlobsBundleV1{
+		Commitments: make([]hexutil.Bytes, 0),
+		Blobs:       make([]hexutil.Bytes, 0),
+		Proofs:      make([]hexutil.Bytes, 0),
+	}
+	hasher := sha256.New()
+	for _, blobHash := range blobHashes {
+		for _, sidecar := range w.current.sidecars {
+			for j := range sidecar.Blobs {
+				// Obtain versioned hashes
+				commitment := sidecar.Commitments[j]
+				hasher.Write(commitment[:])
+				hash := hasher.Sum(nil)
+				hasher.Reset()
+				var vhash common.Hash
+				vhash[0] = params.BlobTxHashVersion
+				copy(vhash[1:], hash[1:])
+				// Append blob if hash matches blob from txs
+				if blobHash == vhash {
+					bundle.Blobs = append(bundle.Blobs, hexutil.Bytes(sidecar.Blobs[j][:]))
+					bundle.Commitments = append(bundle.Commitments, hexutil.Bytes(sidecar.Commitments[j][:]))
+					bundle.Proofs = append(bundle.Proofs, hexutil.Bytes(sidecar.Proofs[j][:]))
+					break
+				}
+			}
+		}
+	}
+
+	return bundle
 }

@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
@@ -51,6 +52,14 @@ func (n *mockBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suav
 	}
 	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
 	return block, big.NewInt(11000), nil
+}
+
+func (n *mockBackend) BuildEthBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	return &engine.ExecutionPayloadEnvelope{}, nil
+}
+
+func (n *mockBackend) BuildEthBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	return &engine.ExecutionPayloadEnvelope{}, nil
 }
 
 func (n *mockBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {

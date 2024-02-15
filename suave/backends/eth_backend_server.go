@@ -2,7 +2,6 @@ package backends
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,8 +22,8 @@ var _ EthBackend = &EthBackendServer{}
 // to resolve the EthBackend server queries
 type EthBackendServerBackend interface {
 	CurrentHeader() *types.Header
-	BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error)
-	BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error)
+	BuildEthBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
+	BuildEthBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
 
@@ -51,13 +50,7 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 		}
 	}
 
-	block, profit, err := e.b.BuildBlockFromTxs(ctx, buildArgs, txs)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: we're not adding blobs, but this is not where you would do it anyways
-	return engine.BlockToExecutableData(block, profit, nil), nil
+	return e.b.BuildEthBlockFromTxs(ctx, buildArgs, txs)
 }
 
 func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
@@ -75,13 +68,7 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 		}
 	}
 
-	block, profit, err := e.b.BuildBlockFromBundles(ctx, buildArgs, bundles)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: we're not adding blobs, but this is not where you would do it anyways
-	return engine.BlockToExecutableData(block, profit, nil), nil
+	return e.b.BuildEthBlockFromBundles(ctx, buildArgs, bundles)
 }
 
 func (e *EthBackendServer) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {

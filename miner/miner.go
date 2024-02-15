@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -252,4 +253,12 @@ func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.Buil
 
 func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	return miner.worker.buildBlockFromBundles(ctx, buildArgs, bundles)
+}
+
+func (miner *Miner) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	return miner.worker.buildEthBlockFromBundles(ctx, buildArgs, bundles)
+}
+
+func (miner *Miner) BuildEthBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	return miner.worker.buildEthBlockFromTxs(ctx, buildArgs, txs)
 }

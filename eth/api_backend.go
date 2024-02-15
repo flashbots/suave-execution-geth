@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -418,12 +419,12 @@ func (b *EthAPIBackend) StateAtTransaction(ctx context.Context, block *types.Blo
 	return b.eth.stateAtTransaction(ctx, block, txIndex, reexec)
 }
 
-func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
-	return b.eth.Miner().BuildBlockFromTxs(ctx, buildArgs, txs)
+func (b *EthAPIBackend) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	return b.eth.Miner().BuildEthBlockFromBundles(ctx, buildArgs, bundles)
 }
 
-func (b *EthAPIBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
-	return b.eth.Miner().BuildBlockFromBundles(ctx, buildArgs, bundles)
+func (b *EthAPIBackend) BuildEthBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	return b.eth.Miner().BuildEthBlockFromTxs(ctx, buildArgs, txs)
 }
 
 func (b *EthAPIBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
