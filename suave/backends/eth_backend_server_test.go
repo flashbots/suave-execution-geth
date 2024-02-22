@@ -55,13 +55,37 @@ func (n *mockBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suav
 }
 
 func (n *mockBackend) BuildEthBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
-	return &engine.ExecutionPayloadEnvelope{}, nil
+	return getDummyExecutionPayloadEnvelope(), nil
 }
 
 func (n *mockBackend) BuildEthBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
-	return &engine.ExecutionPayloadEnvelope{}, nil
+	return getDummyExecutionPayloadEnvelope(), nil
 }
 
 func (n *mockBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
 	return []byte{0x1}, nil
+}
+
+func getDummyExecutionPayloadEnvelope() *engine.ExecutionPayloadEnvelope {
+	dummyExecutableData := &engine.ExecutableData{
+		ParentHash:    common.HexToHash("0x01"),
+		FeeRecipient:  common.HexToAddress("0x02"),
+		StateRoot:     common.HexToHash("0x03"),
+		ReceiptsRoot:  common.HexToHash("0x04"),
+		LogsBloom:     []byte("dummyLogsBloom"),
+		Random:        common.HexToHash("0x05"),
+		Number:        1,
+		GasLimit:      10000000,
+		GasUsed:       500000,
+		Timestamp:     1640995200,
+		ExtraData:     []byte("dummyExtraData"),
+		BaseFeePerGas: big.NewInt(1000000000),
+		BlockHash:     common.HexToHash("0x06"),
+		Transactions:  [][]byte{[]byte("dummyTransaction")},
+	}
+	exePayloadEnv := engine.ExecutionPayloadEnvelope{
+		ExecutionPayload: dummyExecutableData,
+		BlockValue:       big.NewInt(123456789),
+	}
+	return &exePayloadEnv
 }
