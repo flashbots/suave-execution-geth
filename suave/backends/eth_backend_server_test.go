@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -38,20 +37,6 @@ type mockBackend struct{}
 
 func (n *mockBackend) CurrentHeader() *types.Header {
 	return &types.Header{}
-}
-
-func (n *mockBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
-	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
-	return block, big.NewInt(11000), nil
-}
-
-func (n *mockBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
-	var txs types.Transactions
-	for _, bundle := range bundles {
-		txs = append(txs, bundle.Txs...)
-	}
-	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
-	return block, big.NewInt(11000), nil
 }
 
 func (n *mockBackend) BuildEthBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
