@@ -81,14 +81,8 @@ type SessionManager struct {
 }
 
 func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
-	if config.GasCeil == 0 {
-		config.GasCeil = 1000000000000000000
-	}
-	if config.SessionIdleTimeout == 0 {
-		config.SessionIdleTimeout = 5 * time.Second
-	}
-	if config.MaxConcurrentSessions <= 0 {
-		config.MaxConcurrentSessions = 16 // chosen arbitrarily
+	if config == nil {
+		panic("empty session manager config")
 	}
 
 	sem := make(chan struct{}, config.MaxConcurrentSessions)
