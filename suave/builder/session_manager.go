@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/uuid"
-	"github.com/spf13/viper"
 )
 
 // blockchain is the minimum interface to the blockchain
@@ -33,25 +34,41 @@ type blockchain interface {
 }
 
 type Config struct {
-	GasCeil               uint64        `mapstructure:"gas_ceil"`
-	SessionIdleTimeout    time.Duration `mapstructure:"session_idle_timeout"`
-	MaxConcurrentSessions int           `mapstructure:"max_concurrent_sessions"`
+	GasCeil               uint64
+	SessionIdleTimeout    time.Duration
+	MaxConcurrentSessions int
 }
 
-func init() {
-	viper.SetDefault("max_concurrent_sessions", 16)
-	viper.SetDefault("gas_ceil", 1000000000000000000)
-	viper.SetDefault("session_idle_timeout", "5s")
-	viper.AutomaticEnv()
+func getEnvAsUint64(key string, defaultVal uint64) uint64 {
+	valStr := os.Getenv(key)
+	if val, err := strconv.ParseUint(valStr, 10, 64); err == nil {
+		return val
+	}
+	return defaultVal
+}
+
+func getEnvAsInt(key string, defaultVal int) int {
+	valStr := os.Getenv(key)
+	if val, err := strconv.Atoi(valStr); err == nil {
+		return val
+	}
+	return defaultVal
+}
+
+func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
+	valStr := os.Getenv(key)
+	if val, err := time.ParseDuration(valStr); err == nil {
+		return val
+	}
+	return defaultVal
 }
 
 func NewConfigFromEnv() *Config {
-	config := &Config{
-		GasCeil:               viper.GetUint64("gas_ceil"),
-		SessionIdleTimeout:    viper.GetDuration("session_idle_timeout"),
-		MaxConcurrentSessions: viper.GetInt("max_concurrent_sessions"),
+	return &Config{
+		GasCeil:               getEnvAsUint64("GAS_CEIL", 1000000000000000000),
+		SessionIdleTimeout:    getEnvAsDuration("SESSION_IDLE_TIMEOUT", 5*time.Second),
+		MaxConcurrentSessions: getEnvAsInt("MAX_CONCURRENT_SESSIONS", 16),
 	}
-	return config
 }
 
 type SessionManager struct {
