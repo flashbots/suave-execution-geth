@@ -176,7 +176,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		shutdownTracker:   shutdowncheck.NewShutdownTracker(chainDb),
 	}
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
-	var dbVer = "<nil>"
+	dbVer := "<nil>"
 	if bcVersion != nil {
 		dbVer = fmt.Sprintf("%d", *bcVersion)
 	}
@@ -318,7 +318,7 @@ func (s *Ethereum) APIs() []rpc.API {
 		Service:   backends.NewEthBackendServer(s.APIBackend),
 	})
 
-	sessionManager := suave_builder.NewSessionManager(s.blockchain, &suave_builder.Config{})
+	sessionManager := suave_builder.NewSessionManager(s.blockchain, suave_builder.NewConfigFromEnv()))
 
 	apis = append(apis, rpc.API{
 		Namespace: "suavex",
