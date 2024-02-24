@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 )
 
 // blockchain is the minimum interface to the blockchain
@@ -32,9 +33,25 @@ type blockchain interface {
 }
 
 type Config struct {
-	GasCeil               uint64
-	SessionIdleTimeout    time.Duration
-	MaxConcurrentSessions int
+	GasCeil               uint64        `mapstructure:"gas_ceil"`
+	SessionIdleTimeout    time.Duration `mapstructure:"session_idle_timeout"`
+	MaxConcurrentSessions int           `mapstructure:"max_concurrent_sessions"`
+}
+
+func init() {
+	viper.SetDefault("max_concurrent_sessions", 16)
+	viper.SetDefault("gas_ceil", 1000000000000000000)
+	viper.SetDefault("session_idle_timeout", "5s")
+	viper.AutomaticEnv()
+}
+
+func NewConfigFromEnv() *Config {
+	config := &Config{
+		GasCeil:               viper.GetUint64("gas_ceil"),
+		SessionIdleTimeout:    viper.GetDuration("session_idle_timeout"),
+		MaxConcurrentSessions: viper.GetInt("max_concurrent_sessions"),
+	}
+	return config
 }
 
 type SessionManager struct {

@@ -18,9 +18,9 @@ import (
 )
 
 func TestSessionManager_SessionTimeout(t *testing.T) {
-	mngr, _ := newSessionManager(t, &Config{
-		SessionIdleTimeout: 500 * time.Millisecond,
-	})
+	config := NewConfigFromEnv()
+	config.SessionIdleTimeout = 500 * time.Millisecond
+	mngr, _ := newSessionManager(t, config)
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
@@ -34,12 +34,12 @@ func TestSessionManager_SessionTimeout(t *testing.T) {
 func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 	t.Parallel()
 
-	const d = time.Millisecond * 100
+	const d = time.Millisecond * 10
 
-	mngr, _ := newSessionManager(t, &Config{
-		MaxConcurrentSessions: 1,
-		SessionIdleTimeout:    d,
-	})
+	config := NewConfigFromEnv()
+	config.MaxConcurrentSessions = 1
+	config.SessionIdleTimeout = d
+	mngr, _ := newSessionManager(t, config)
 
 	t.Run("SessionAvailable", func(t *testing.T) {
 		sess, err := mngr.NewSession(context.TODO())
@@ -69,9 +69,9 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 }
 
 func TestSessionManager_SessionRefresh(t *testing.T) {
-	mngr, _ := newSessionManager(t, &Config{
-		SessionIdleTimeout: 500 * time.Millisecond,
-	})
+	config := NewConfigFromEnv()
+	config.SessionIdleTimeout = 500 * time.Millisecond
+	mngr, _ := newSessionManager(t, config)
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
@@ -95,8 +95,7 @@ func TestSessionManager_SessionRefresh(t *testing.T) {
 }
 
 func TestSessionManager_StartSession(t *testing.T) {
-	// test that the session starts and it can simulate transactions
-	mngr, bMock := newSessionManager(t, &Config{})
+	mngr, bMock := newSessionManager(t, NewConfigFromEnv())
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
@@ -107,17 +106,13 @@ func TestSessionManager_StartSession(t *testing.T) {
 	require.NotNil(t, receipt)
 }
 
-func newSessionManager(t *testing.T, cfg *Config) (*SessionManager, *blockchainMock) {
-	if cfg == nil {
-		cfg = &Config{}
-	}
-
+func newSessionManager(t *testing.T, config *Config) (*SessionManager, *blockchainMock) {
 	state := newMockState(t)
 
 	bMock := &blockchainMock{
 		state: state,
 	}
-	return NewSessionManager(bMock, cfg), bMock
+	return NewSessionManager(bMock, config), bMock
 }
 
 type blockchainMock struct {
@@ -174,11 +169,11 @@ func newMockState(t *testing.T) *mockState {
 
 	preState.AddBalance(premineKeyAddr, big.NewInt(1000000000000000000))
 
-	root, err := preState.Commit(1, true)
+	root, err := preState.Commit(true)
 	require.NoError(t, err)
 
 	// for the sake of this test, we only need all the forks enabled
-	chainConfig := params.TestChainConfig
+	chainConfig := params.SuaveChainConfig
 
 	// Disable london so that we do not check gasFeeCap (TODO: Fix)
 	chainConfig.LondonBlock = big.NewInt(100)
