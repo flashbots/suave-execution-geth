@@ -176,7 +176,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		shutdownTracker:   shutdowncheck.NewShutdownTracker(chainDb),
 	}
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
-	dbVer := "<nil>"
+	var dbVer = "<nil>"
 	if bcVersion != nil {
 		dbVer = fmt.Sprintf("%d", *bcVersion)
 	}
