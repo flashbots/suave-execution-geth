@@ -41,26 +41,38 @@ type Config struct {
 
 func getEnvAsUint64(key string, defaultVal uint64) uint64 {
 	valStr := os.Getenv(key)
-	if val, err := strconv.ParseUint(valStr, 10, 64); err == nil {
-		return val
+	val, err := strconv.ParseUint(valStr, 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse flag: %s, err: %v", key, err))
+	}
+	if val == 0 {
+		return defaultVal
 	}
 	return defaultVal
 }
 
 func getEnvAsInt(key string, defaultVal int) int {
 	valStr := os.Getenv(key)
-	if val, err := strconv.Atoi(valStr); err == nil {
-		return val
+	val, err := strconv.Atoi(valStr)
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse flag: %s, err: %v", key, err))
+	}
+	if val == 0 {
+		return defaultVal
 	}
 	return defaultVal
 }
 
 func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 	valStr := os.Getenv(key)
-	if val, err := time.ParseDuration(valStr); err == nil {
-		return val
+	val, err := time.ParseDuration(valStr)
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse flag: %s, err: %v", key, err))
 	}
-	return defaultVal
+	if val == 0 {
+		return defaultVal
+	}
+	return val
 }
 
 func NewConfigFromEnv() *Config {
