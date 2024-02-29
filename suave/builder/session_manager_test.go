@@ -18,7 +18,7 @@ import (
 )
 
 func TestSessionManager_SessionTimeout(t *testing.T) {
-	config := NewConfigFromEnv()
+	config := NewConfig()
 	config.SessionIdleTimeout = 500 * time.Millisecond
 	mngr, _ := newSessionManager(t, config)
 
@@ -36,7 +36,7 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 
 	const d = time.Millisecond * 100
 
-	config := NewConfigFromEnv()
+	config := NewConfig()
 	config.MaxConcurrentSessions = 1
 	config.SessionIdleTimeout = d
 	mngr, _ := newSessionManager(t, config)
@@ -69,7 +69,7 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 }
 
 func TestSessionManager_SessionRefresh(t *testing.T) {
-	config := NewConfigFromEnv()
+	config := NewConfig()
 	config.SessionIdleTimeout = 500 * time.Millisecond
 	mngr, _ := newSessionManager(t, config)
 
@@ -95,7 +95,7 @@ func TestSessionManager_SessionRefresh(t *testing.T) {
 }
 
 func TestSessionManager_StartSession(t *testing.T) {
-	mngr, bMock := newSessionManager(t, NewConfigFromEnv())
+	mngr, bMock := newSessionManager(t, NewConfig())
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)

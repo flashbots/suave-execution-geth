@@ -39,48 +39,34 @@ type Config struct {
 	MaxConcurrentSessions int
 }
 
-func getEnvAsUint64(key string, defaultVal uint64) uint64 {
-	valStr := os.Getenv(key)
-	val, err := strconv.ParseUint(valStr, 10, 64)
-	if err != nil {
-		panic(fmt.Sprintf("failed to parse flag: %s, err: %v", key, err))
+func NewConfig() *Config {
+	cfg := &Config{
+		GasCeil:               1000000000000000000,
+		SessionIdleTimeout:    5 * time.Second,
+		MaxConcurrentSessions: 16,
 	}
-	if val == 0 {
-		return defaultVal
-	}
-	return defaultVal
-}
 
-func getEnvAsInt(key string, defaultVal int) int {
-	valStr := os.Getenv(key)
-	val, err := strconv.Atoi(valStr)
-	if err != nil {
-		panic(fmt.Sprintf("failed to parse flag: %s, err: %v", key, err))
+	// apply env if exists
+	var err error
+	if valStr := os.Getenv("GAS_CEIL"); valStr != "" {
+		if cfg.GasCeil, err = strconv.ParseUint(valStr, 10, 64); err != nil {
+			panic(fmt.Sprintf("failed to parse GAS_CEIL flag as uint: %v", err))
+		}
 	}
-	if val == 0 {
-		return defaultVal
-	}
-	return defaultVal
-}
 
-func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
-	valStr := os.Getenv(key)
-	val, err := time.ParseDuration(valStr)
-	if err != nil {
-		panic(fmt.Sprintf("failed to parse flag: %s, err: %v", key, err))
+	if valStr := os.Getenv("SESSION_IDLE_TIMEOUT"); valStr != "" {
+		if cfg.SessionIdleTimeout, err = time.ParseDuration(valStr); err != nil {
+			panic(fmt.Sprintf("failed to parse SESSION_IDLE_TIMEOUT flag as duration: %v", err))
+		}
 	}
-	if val == 0 {
-		return defaultVal
-	}
-	return val
-}
 
-func NewConfigFromEnv() *Config {
-	return &Config{
-		GasCeil:               getEnvAsUint64("GAS_CEIL", 1000000000000000000),
-		SessionIdleTimeout:    getEnvAsDuration("SESSION_IDLE_TIMEOUT", 5*time.Second),
-		MaxConcurrentSessions: getEnvAsInt("MAX_CONCURRENT_SESSIONS", 16),
+	if valStr := os.Getenv("MAX_CONCURRENT_SESSIONS"); valStr != "" {
+		if cfg.MaxConcurrentSessions, err = strconv.Atoi(valStr); err != nil {
+			panic(fmt.Sprintf("failed to parse MAX_CONCURRENT_SESSIONS flag as int: %v", err))
+		}
 	}
+
+	return cfg
 }
 
 type SessionManager struct {
