@@ -2,10 +2,18 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+)
+
+var (
+	ErrInvalidInclusionRange = errors.New("invalid inclusion range")
+	ErrInvalidBlockNumber    = errors.New("invalid block number")
+	ErrExceedsMaxBlock       = errors.New("block number exceeds max block")
+	ErrEmptyTxs              = errors.New("empty transactions")
 )
 
 // Simplified Share Bundle Type for PoC

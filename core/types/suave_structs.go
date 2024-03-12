@@ -7,18 +7,18 @@ type DataId [16]byte
 // Structs
 
 type BuildBlockArgs struct {
-	Slot           uint64
-	ProposerPubkey []byte
-	Parent         common.Hash
-	Timestamp      uint64
-	FeeRecipient   common.Address
-	GasLimit       uint64
-	Random         common.Hash
-	Withdrawals    []*Withdrawal
+	Slot                  uint64
+	ProposerPubkey        []byte
+	Parent                common.Hash
+	Timestamp             uint64
+	FeeRecipient          common.Address
+	GasLimit              uint64
+	Random                common.Hash
+	Withdrawals           []*Withdrawal
 	ParentBeaconBlockRoot common.Hash
-	Extra          []byte
-	BeaconRoot     common.Hash
-	FillPending    bool
+	Extra                 []byte
+	BeaconRoot            common.Hash
+	FillPending           bool
 }
 
 type DataRecord struct {
@@ -43,6 +43,13 @@ type SimulateTransactionResult struct {
 	Logs    []*SimulatedLog
 	Success bool
 	Error   string
+}
+
+type SimulateBundleResult struct {
+	Egp                        uint64
+	SimulateTransactionResults []*SimulateTransactionResult
+	Success                    bool
+	Error                      string
 }
 
 type SimulatedLog struct {

@@ -152,11 +152,11 @@ type mockState struct {
 	stateRoot common.Hash
 	statedb   state.Database
 
-	premineKey    *ecdsa.PrivateKey
-	premineKeyAdd common.Address
+	premineKey     *ecdsa.PrivateKey
+	premineKeyAddr common.Address
 
-	nextNonce uint64 // figure out a better way
-	signer    types.Signer
+	nonces map[common.Address]uint64
+	signer types.Signer
 
 	chainConfig *params.ChainConfig
 }
@@ -184,12 +184,13 @@ func newMockState(t *testing.T) *mockState {
 	chainConfig.LondonBlock = big.NewInt(100)
 
 	return &mockState{
-		statedb:       db,
-		stateRoot:     root,
-		premineKey:    premineKey,
-		premineKeyAdd: premineKeyAddr,
-		signer:        types.NewEIP155Signer(chainConfig.ChainID),
-		chainConfig:   chainConfig,
+		statedb:        db,
+		stateRoot:      root,
+		premineKey:     premineKey,
+		premineKeyAddr: premineKeyAddr,
+		signer:         types.NewEIP155Signer(chainConfig.ChainID),
+		chainConfig:    chainConfig,
+		nonces:         make(map[common.Address]uint64),
 	}
 }
 
@@ -197,25 +198,35 @@ func (m *mockState) stateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, m.statedb, nil)
 }
 
-func (m *mockState) getNonce() uint64 {
-	next := m.nextNonce
-	m.nextNonce++
+func (m *mockState) getNonce(addr common.Address) uint64 {
+	next := m.nonces[addr]
+	m.nonces[addr]++
 	return next
 }
 
 func (m *mockState) newTransfer(t *testing.T, to common.Address, amount *big.Int) *types.Transaction {
-	tx := types.NewTransaction(m.getNonce(), to, amount, 1000000, big.NewInt(1), nil)
-	return m.newTxn(t, tx)
+	return m.newTransferFrom(t, m.premineKey, to, amount)
 }
 
 func (m *mockState) newTxn(t *testing.T, tx *types.Transaction) *types.Transaction {
+	return m.newTxnFrom(t, tx, m.premineKey)
+}
+
+func (m *mockState) newTxnFrom(t *testing.T, tx *types.Transaction, privKey *ecdsa.PrivateKey) *types.Transaction {
 	// sign the transaction
-	signature, err := crypto.Sign(m.signer.Hash(tx).Bytes(), m.premineKey)
+	signature, err := crypto.Sign(m.signer.Hash(tx).Bytes(), privKey)
 	require.NoError(t, err)
 
 	// include the signature in the transaction
 	tx, err = tx.WithSignature(m.signer, signature)
 	require.NoError(t, err)
 
+	return tx
+}
+
+func (m *mockState) newTransferFrom(t *testing.T, privKey *ecdsa.PrivateKey, to common.Address, amount *big.Int) *types.Transaction {
+	addr := crypto.PubkeyToAddress(privKey.PublicKey)
+	tx := types.NewTransaction(m.getNonce(addr), to, amount, 1000000, big.NewInt(1), nil)
+	tx = m.newTxnFrom(t, tx, privKey)
 	return tx
 }
