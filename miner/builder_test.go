@@ -273,6 +273,33 @@ func TestBuilder_BuildBlock(t *testing.T) {
 	require.Len(t, block.Transactions(), 1)
 }
 
+func TestBuilder_BuildBlock_MevShare(t *testing.T) {
+	t.Parallel()
+	config, backend := newMockBuilderConfig(t)
+
+	builder, err := NewBuilder(config, &BuilderArgs{})
+	require.NoError(t, err)
+
+	tx1 := backend.newRandomTx(false)
+	tx2 := backend.newRandomTxWithNonce(1)
+
+	refundPercent := 10
+	bundle := &suavextypes.Bundle{
+		Txs:           []*types.Transaction{tx1, tx2},
+		RefundPercent: &refundPercent,
+	}
+
+	_, err = builder.AddBundles([]*suavextypes.Bundle{bundle})
+	require.NoError(t, err)
+
+	block, err := builder.BuildBlock()
+	require.NoError(t, err)
+	require.NotNil(t, block)
+	require.Len(t, block.Transactions(), 4) // 2 txs + 1 refund + 1 proposer payment
+	require.Equal(t, builder.args.FeeRecipient, *builder.env.txs[3].To())
+	// TODO: check refund amount to fee recipient
+}
+
 func TestBuilder_ContractWithLogs(t *testing.T) {
 	// test that we can simulate a txn with a contract that emits events
 	t.Parallel()

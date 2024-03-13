@@ -261,7 +261,7 @@ func (b *Builder) BuildBlock() (*types.Block, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = b.wrk.applyTransaction(work, paymentTx)
+		_, err = b.wrk.commitTransaction(work, paymentTx)
 		if err != nil {
 			return nil, err
 		}
