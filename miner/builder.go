@@ -29,6 +29,7 @@ var (
 	ErrInvalidBlockNumber    = errors.New("invalid block number")
 	ErrExceedsMaxBlock       = errors.New("block number exceeds max block")
 	ErrEmptyTxs              = errors.New("empty transactions")
+	ErrInvalidRefundPercent  = errors.New("refund percent should be between 0 and 99 inclusive")
 )
 
 type BuilderConfig struct {
@@ -157,72 +158,64 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 				// continue if the transaction is in the reverting hashes
 				continue
 			}
-			return &suavextypes.SimulateBundleResult{
-				Error:                      err.Error(),
-				SimulateTransactionResults: results,
-				Success:                    false,
-			}, err
+			return makeBundleSimResult(results, egp, err), err
 		}
 		egp += result.Egp
 	}
 	profitPostBundle := env.state.GetBalance(env.coinbase)
+	// reset coinbase to the original fee recipient
+	env.coinbase = feeRecipient
 
 	if bundle.HasRefund() {
-		if err := b.processMevShareProfit(bundle, env, profitPreBundle, profitPostBundle); err != nil {
-			return &suavextypes.SimulateBundleResult{
-				Error:                      err.Error(),
-				SimulateTransactionResults: results,
-				Success:                    false,
-			}, nil
+		tx, err := b.getRefundTx(bundle, env, profitPreBundle, profitPostBundle, feeRecipient)
+		if err != nil {
+			return makeBundleSimResult(results, egp, err), err
 		}
-		// reset coinbase to the original fee recipient
-		env.coinbase = feeRecipient
+
+		_, err = b.addTransaction(tx, env)
+		if err != nil {
+			return makeBundleSimResult(results, egp, err), err
+		}
 	}
 
-	return &suavextypes.SimulateBundleResult{
-		Egp:                        egp,
-		SimulateTransactionResults: results,
-		Success:                    true,
-	}, nil
+	return makeBundleSimResult(results, egp, nil), nil
 }
 
-func (b *Builder) processMevShareProfit(bundle *suavextypes.Bundle, env *environment, profitPreBundle *big.Int, profitPostBundle *big.Int) error {
-	if len(bundle.Txs) > 0 && bundle.RefundPercent != nil {
-		refundTransferCost := new(big.Int).Mul(big.NewInt(28000), env.header.BaseFee)
-		refundPrct := *bundle.RefundPercent
-		if refundPrct == 0 {
-			refundPrct = 10
-		}
-
-		bundleProfit := new(big.Int).Sub(profitPostBundle, profitPreBundle)
-		refundAmt := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPrct)))
-		refundAmt = new(big.Int).Div(refundAmt, big.NewInt(100))
-		refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
-		userTx := bundle.Txs[0]
-		refundAddr, err := types.Sender(types.LatestSignerForChainID(userTx.ChainId()), userTx)
-		if err != nil {
-			return err
-		}
-
-		currNonce := env.state.GetNonce(b.ephemeralAddr)
-		paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
-			Nonce:    currNonce,
-			To:       &refundAddr,
-			Value:    refundAmt,
-			Gas:      28000,
-			GasPrice: env.header.BaseFee,
-		}), env.signer, b.ephemeralPrivKey)
-
-		if err != nil {
-			return err
-		}
-		_, err = b.wrk.applyTransaction(env, paymentTx)
-
-		if err != nil {
-			return err
-		}
+func (b *Builder) getRefundTx(bundle *suavextypes.Bundle, env *environment, profitPreBundle *big.Int, profitPostBundle *big.Int, feeRecipient common.Address) (*types.Transaction, error) {
+	if !(len(bundle.Txs) > 1 && bundle.RefundPercent != nil) {
+		return nil, errors.New("refund is not possible with the given bundle")
 	}
-	return nil
+
+	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), env.header.BaseFee)
+	refundPrct := *bundle.RefundPercent
+	if refundPrct == 0 {
+		refundPrct = 10
+	}
+
+	bundleProfit := new(big.Int).Sub(profitPostBundle, profitPreBundle)
+	refundAmt := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPrct)))
+	refundAmt = new(big.Int).Div(refundAmt, big.NewInt(100))
+	refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
+	userTx := bundle.Txs[0]
+	refundAddr, err := types.Sender(types.LatestSignerForChainID(userTx.ChainId()), userTx)
+	if err != nil {
+		return nil, err
+	}
+
+	currNonce := env.state.GetNonce(b.ephemeralAddr)
+	paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    currNonce,
+		To:       &refundAddr,
+		Value:    refundAmt,
+		Gas:      28000,
+		GasPrice: env.header.BaseFee,
+	}), env.signer, b.ephemeralPrivKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return paymentTx, nil
 }
 
 func (b *Builder) AddBundles(bundles []*suavextypes.Bundle) ([]*suavextypes.SimulateBundleResult, error) {
@@ -350,6 +343,22 @@ func receiptToSimResult(receipt *types.Receipt, egp uint64) *suavextypes.Simulat
 	return result
 }
 
+func makeBundleSimResult(txSimResults []*suavextypes.SimulateTransactionResult, egp uint64, err error) *suavextypes.SimulateBundleResult {
+	if err == nil {
+		return &suavextypes.SimulateBundleResult{
+			Egp:                        egp,
+			SimulateTransactionResults: txSimResults,
+			Success:                    true,
+		}
+	}
+
+	return &suavextypes.SimulateBundleResult{
+		Error:                      err.Error(),
+		SimulateTransactionResults: txSimResults,
+		Success:                    false,
+	}
+}
+
 func executableDataToDenebExecutionPayload(data *engine.ExecutableData) (*deneb.ExecutionPayload, error) {
 	transactionData := make([]bellatrix.Transaction, len(data.Transactions))
 	for i, tx := range data.Transactions {
@@ -415,6 +424,12 @@ func checkBundleParams(currentBlockNumber *big.Int, bundle *suavextypes.Bundle) 
 	// check if the bundle has transactions
 	if bundle.Txs == nil || bundle.Txs.Len() == 0 {
 		return ErrEmptyTxs
+	}
+
+	// check if refund percent is valid
+	// https: //github.com/flashbots/mev-share/blob/main/specs/bundles/refund-recipient.md#refundpercent
+	if bundle.RefundPercent != nil && (*bundle.RefundPercent < 0 || *bundle.RefundPercent > 99) {
+		return ErrInvalidRefundPercent
 	}
 
 	return nil

@@ -188,6 +188,50 @@ func TestBuilder_AddBundles_InvalidParams(t *testing.T) {
 	require.Equal(t, big.NewInt(0), builder.env.state.GetBalance(testUserAddress))
 }
 
+func TestBuilder_AddBundles_MevShare(t *testing.T) {
+	t.Parallel()
+	config, backend := newMockBuilderConfig(t)
+	builder, err := NewBuilder(config, &BuilderArgs{})
+	require.NoError(t, err)
+
+	tx1 := backend.newRandomTx(false)
+	tx2 := backend.newRandomTxWithNonce(1)
+
+	bundle := &suavextypes.Bundle{
+		Txs: []*types.Transaction{tx1, tx2},
+	}
+
+	// measure bundle profit by running it
+	pre := builder.env.state.GetBalance(builder.args.FeeRecipient)
+	res, err := builder.AddBundles([]*suavextypes.Bundle{bundle})
+	post := builder.env.state.GetBalance(builder.args.FeeRecipient)
+	require.NoError(t, err)
+	bundleProfit := new(big.Int).Sub(post, pre)
+
+	tx3 := backend.newRandomTxWithNonce(2)
+	tx4 := backend.newRandomTxWithNonce(3)
+
+	refundPercent := 10
+	bundle = &suavextypes.Bundle{
+		Txs:           []*types.Transaction{tx3, tx4},
+		RefundPercent: &refundPercent,
+	}
+
+	res, err = builder.AddBundles([]*suavextypes.Bundle{bundle})
+	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), builder.env.header.BaseFee)
+	refundAmt := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPercent)))
+	refundAmt = new(big.Int).Div(refundAmt, big.NewInt(100))
+	refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
+
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.True(t, res[0].Success)
+	require.Len(t, res[0].SimulateTransactionResults, 2)
+	require.Len(t, builder.env.txs, 5) // 1 additional refund paymentTx
+	paymentTx := builder.env.txs[4]
+	require.Equal(t, refundAmt, paymentTx.Value())
+}
+
 func TestBuilder_FillTransactions(t *testing.T) {
 	t.Parallel()
 	config, backend := newMockBuilderConfig(t)
