@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	suavextypes "github.com/ethereum/go-ethereum/suave/builder/api"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -46,10 +48,12 @@ type BuilderArgs struct {
 }
 
 type Builder struct {
-	env   *environment
-	wrk   *worker
-	args  *BuilderArgs
-	block *types.Block
+	env              *environment
+	wrk              *worker
+	args             *BuilderArgs
+	block            *types.Block
+	ephemeralPrivKey *ecdsa.PrivateKey
+	ephemeralAddr    common.Address
 }
 
 func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
@@ -80,6 +84,11 @@ func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
 
 	env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	b.env = env
+	b.ephemeralPrivKey, err = crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	b.ephemeralAddr = crypto.PubkeyToAddress(b.ephemeralPrivKey.PublicKey)
 
 	return b, nil
 }
@@ -130,8 +139,15 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 
 	revertingHashes := bundle.RevertingHashesMap()
 	egp := uint64(0)
+	feeRecipient := env.coinbase
+
+	if bundle.IsMevShareBundle() {
+		env.coinbase = b.ephemeralAddr
+	}
 
 	var results []*suavextypes.SimulateTransactionResult
+
+	profitPreBundle := env.state.GetBalance(env.coinbase)
 	for _, txn := range bundle.Txs {
 		result, err := b.addTransaction(txn, env)
 		results = append(results, result)
@@ -148,6 +164,19 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 		}
 		egp += result.Egp
 	}
+	profitPostBundle := env.state.GetBalance(env.coinbase)
+
+	if bundle.IsMevShareBundle() {
+		if err := b.processMevShareProfit(bundle, env, profitPreBundle, profitPostBundle); err != nil {
+			return &suavextypes.SimulateBundleResult{
+				Error:                      err.Error(),
+				SimulateTransactionResults: results,
+				Success:                    false,
+			}, nil
+		}
+		// reset coinbase to the original fee recipient
+		env.coinbase = feeRecipient
+	}
 
 	return &suavextypes.SimulateBundleResult{
 		Egp:                        egp,
@@ -156,14 +185,70 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 	}, nil
 }
 
+func (b *Builder) processMevShareProfit(bundle *suavextypes.Bundle, env *environment, profitPreBundle *big.Int, profitPostBundle *big.Int) error {
+	if len(bundle.Txs) > 0 && bundle.RefundPercent != nil {
+		refundTransferCost := new(big.Int).Mul(big.NewInt(28000), env.header.BaseFee)
+
+		refundPrct := *bundle.RefundPercent
+		if refundPrct == 0 {
+			refundPrct = 10
+		}
+
+		bundleProfit := new(big.Int).Sub(profitPostBundle, profitPreBundle)
+		refundAmt := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPrct)))
+		refundAmt = new(big.Int).Div(refundAmt, big.NewInt(100))
+		refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
+		userTx := bundle.Txs[0]
+		refundAddr, err := types.Sender(types.LatestSignerForChainID(userTx.ChainId()), userTx)
+		if err != nil {
+			return err
+		}
+
+		currNonce := env.state.GetNonce(b.ephemeralAddr)
+		paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+			Nonce:    currNonce,
+			To:       &refundAddr,
+			Value:    refundAmt,
+			Gas:      28000,
+			GasPrice: env.header.BaseFee,
+		}), env.signer, b.ephemeralPrivKey)
+
+		if err != nil {
+			return err
+		}
+		_, err = b.wrk.applyTransaction(env, paymentTx)
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (b *Builder) AddBundle(bundle *suavextypes.Bundle) (*suavextypes.SimulateBundleResult, error) {
 	snap := b.env.copy()
-	result, err := b.addBundle(bundle, snap)
+	ephemeralPrivKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	feeRecipient := snap.coinbase
+	ephemeralAddr := crypto.PubkeyToAddress(ephemeralPrivKey.PublicKey)
+	snap.coinbase = ephemeralAddr
 
+	profitPreBundle := snap.state.GetBalance(ephemeralAddr)
+	result, err := b.addBundle(bundle, snap)
 	if err != nil {
 		return result, nil
 	}
+	profitPostBundle := snap.state.GetBalance(ephemeralAddr)
 
+	if err := b.processMevShareProfit(bundle, snap, profitPreBundle, profitPostBundle); err != nil {
+		return nil, err
+	}
+
+	// reset coinbase
+	snap.coinbase = feeRecipient
+	// update environment
 	b.env = snap
 	return result, nil
 }
@@ -193,6 +278,28 @@ func (b *Builder) FillPending() error {
 
 func (b *Builder) BuildBlock() (*types.Block, error) {
 	work := b.env
+
+	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), work.header.BaseFee)
+	profit := work.state.GetBalance(b.ephemeralAddr)
+	profit = new(big.Int).Sub(profit, refundTransferCost)
+	if profit.Cmp(big.NewInt(0)) > 0 {
+		currNonce := work.state.GetNonce(b.ephemeralAddr)
+		paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+			Nonce:    currNonce,
+			To:       &work.coinbase,
+			Value:    profit,
+			Gas:      28000,
+			GasPrice: work.header.BaseFee,
+		}), work.signer, b.ephemeralPrivKey)
+
+		if err != nil {
+			return nil, err
+		}
+		_, err = b.wrk.applyTransaction(work, paymentTx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	block, err := b.wrk.engine.FinalizeAndAssemble(b.wrk.chain, work.header, work.state, work.txs, nil, work.receipts, nil)
 	if err != nil {
