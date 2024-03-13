@@ -141,7 +141,7 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 	egp := uint64(0)
 	feeRecipient := env.coinbase
 
-	if bundle.IsMevShareBundle() {
+	if bundle.HasRefund() {
 		// set coinbase to the ephemeral address to collect bundle profit
 		env.coinbase = b.ephemeralAddr
 	}
@@ -167,7 +167,7 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 	}
 	profitPostBundle := env.state.GetBalance(env.coinbase)
 
-	if bundle.IsMevShareBundle() {
+	if bundle.HasRefund() {
 		if err := b.processMevShareProfit(bundle, env, profitPreBundle, profitPostBundle); err != nil {
 			return &suavextypes.SimulateBundleResult{
 				Error:                      err.Error(),

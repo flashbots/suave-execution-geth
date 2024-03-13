@@ -32,7 +32,7 @@ func (bundle *Bundle) RevertingHashesMap() map[common.Hash]struct{} {
 	return m
 }
 
-func (bundle *Bundle) IsMevShareBundle() bool {
+func (bundle *Bundle) HasRefund() bool {
 	return len(bundle.Txs) > 1 && bundle.RefundPercent != nil
 }
 
