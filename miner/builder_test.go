@@ -219,9 +219,9 @@ func TestBuilder_AddBundles_MevShare(t *testing.T) {
 
 	res, err = builder.AddBundles([]*suavextypes.Bundle{bundle})
 	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), builder.env.header.BaseFee)
-	refundAmt := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPercent)))
-	refundAmt = new(big.Int).Div(refundAmt, big.NewInt(100))
-	refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
+	refundAmount := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPercent)))
+	refundAmount = new(big.Int).Div(refundAmount, big.NewInt(100))
+	refundAmount = new(big.Int).Sub(refundAmount, refundTransferCost)
 
 	require.NoError(t, err)
 	require.Len(t, res, 1)
@@ -229,7 +229,7 @@ func TestBuilder_AddBundles_MevShare(t *testing.T) {
 	require.Len(t, res[0].SimulateTransactionResults, 2)
 	require.Len(t, builder.env.txs, 5) // 1 additional refund paymentTx
 	paymentTx := builder.env.txs[4]
-	require.Equal(t, refundAmt, paymentTx.Value())
+	require.Equal(t, refundAmount, paymentTx.Value())
 }
 
 func TestBuilder_FillTransactions(t *testing.T) {
