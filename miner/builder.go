@@ -142,6 +142,7 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 	feeRecipient := env.coinbase
 
 	if bundle.IsMevShareBundle() {
+		// set coinbase to the ephemeral address to collect bundle profit
 		env.coinbase = b.ephemeralAddr
 	}
 
@@ -188,7 +189,6 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 func (b *Builder) processMevShareProfit(bundle *suavextypes.Bundle, env *environment, profitPreBundle *big.Int, profitPostBundle *big.Int) error {
 	if len(bundle.Txs) > 0 && bundle.RefundPercent != nil {
 		refundTransferCost := new(big.Int).Mul(big.NewInt(28000), env.header.BaseFee)
-
 		refundPrct := *bundle.RefundPercent
 		if refundPrct == 0 {
 			refundPrct = 10
@@ -227,27 +227,12 @@ func (b *Builder) processMevShareProfit(bundle *suavextypes.Bundle, env *environ
 
 func (b *Builder) AddBundle(bundle *suavextypes.Bundle) (*suavextypes.SimulateBundleResult, error) {
 	snap := b.env.copy()
-	ephemeralPrivKey, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, err
-	}
-	feeRecipient := snap.coinbase
-	ephemeralAddr := crypto.PubkeyToAddress(ephemeralPrivKey.PublicKey)
-	snap.coinbase = ephemeralAddr
 
-	profitPreBundle := snap.state.GetBalance(ephemeralAddr)
 	result, err := b.addBundle(bundle, snap)
 	if err != nil {
 		return result, nil
 	}
-	profitPostBundle := snap.state.GetBalance(ephemeralAddr)
 
-	if err := b.processMevShareProfit(bundle, snap, profitPreBundle, profitPostBundle); err != nil {
-		return nil, err
-	}
-
-	// reset coinbase
-	snap.coinbase = feeRecipient
 	// update environment
 	b.env = snap
 	return result, nil
@@ -279,6 +264,7 @@ func (b *Builder) FillPending() error {
 func (b *Builder) BuildBlock() (*types.Block, error) {
 	work := b.env
 
+	// check if ephemeral address has profit and transfer it to the fee recipient
 	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), work.header.BaseFee)
 	profit := work.state.GetBalance(b.ephemeralAddr)
 	profit = new(big.Int).Sub(profit, refundTransferCost)
