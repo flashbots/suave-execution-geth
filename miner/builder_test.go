@@ -176,12 +176,34 @@ func TestBuilder_AddBundle_InvalidParams(t *testing.T) {
 	require.Equal(t, big.NewInt(0), builder.env.state.GetBalance(testUserAddress))
 }
 
+func TestBuilder_AddBundle_MevShare(t *testing.T) {
+	t.Parallel()
+	config, backend := newMockBuilderConfig(t)
+	builder, err := NewBuilder(config, &BuilderArgs{})
+	require.NoError(t, err)
+
+	tx1 := backend.newRandomTx(false)
+	tx2 := backend.newRandomTxWithNonce(1)
+
+	refundPercent := 10
+	bundle := &suavextypes.Bundle{
+		Txs:           []*types.Transaction{tx1, tx2},
+		RefundPercent: &refundPercent,
+	}
+
+	res, err := builder.AddBundle(bundle)
+	require.NoError(t, err)
+	require.True(t, res.Success)
+	fmt.Println("ephemeralAddr", builder.ephemeralAddr.Hex())
+	require.NotEqual(t, 0, builder.env.state.GetBalance(builder.ephemeralAddr))
+	fmt.Println("balance", builder.env.state.GetBalance(builder.ephemeralAddr))
+	fmt.Println("balance", builder.env.state.GetBalance(builder.env.coinbase))
+}
+
 func TestBuilder_AddBundles_Simple(t *testing.T) {
 	t.Parallel()
 	config, backend := newMockBuilderConfig(t)
-	builder, err := NewBuilder(config, &BuilderArgs{
-		Slot: 10,
-	})
+	builder, err := NewBuilder(config, &BuilderArgs{})
 	require.NoError(t, err)
 
 	tx1 := backend.newRandomTx(false)
