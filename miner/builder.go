@@ -131,28 +131,28 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 	revertingHashes := bundle.RevertingHashesMap()
 	egp := uint64(0)
 
-	var results []*suavextypes.SimulateTransactionResult
+	var logs []*suavextypes.SimulatedLog
 	for _, txn := range bundle.Txs {
 		result, err := b.addTransaction(txn, env)
-		results = append(results, result)
+		logs = append(logs, result.Logs...)
 		if err != nil {
 			if _, ok := revertingHashes[txn.Hash()]; ok {
 				// continue if the transaction is in the reverting hashes
 				continue
 			}
 			return &suavextypes.SimulateBundleResult{
-				Error:                      err.Error(),
-				SimulateTransactionResults: results,
-				Success:                    false,
+				Error:   err.Error(),
+				Logs:    logs,
+				Success: false,
 			}, err
 		}
 		egp += result.Egp
 	}
 
 	return &suavextypes.SimulateBundleResult{
-		Egp:                        egp,
-		SimulateTransactionResults: results,
-		Success:                    true,
+		Egp:     egp,
+		Logs:    logs,
+		Success: true,
 	}, nil
 }
 
