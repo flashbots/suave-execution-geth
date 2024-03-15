@@ -119,9 +119,7 @@ func TestBuilder_AddBundles_RevertHashes(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res, 1)
 	require.False(t, res[0].Success)
-	require.Len(t, res[0].SimulateTransactionResults, 2)
-	require.True(t, res[0].SimulateTransactionResults[0].Success)
-	require.False(t, res[0].SimulateTransactionResults[1].Success)
+	require.Len(t, res[0].Logs, 0)
 	require.Equal(t, big.NewInt(0), builder.env.state.GetBalance(testUserAddress))
 
 	bundle.RevertingHashes = []common.Hash{tx2.Hash()}
@@ -130,9 +128,7 @@ func TestBuilder_AddBundles_RevertHashes(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res, 1)
 	require.True(t, res[0].Success)
-	require.Len(t, res[0].SimulateTransactionResults, 2)
-	require.True(t, res[0].SimulateTransactionResults[0].Success)
-	require.False(t, res[0].SimulateTransactionResults[1].Success)
+	require.Len(t, res[0].Logs, 0)
 	require.Equal(t, big.NewInt(1000), builder.env.state.GetBalance(testUserAddress))
 }
 
@@ -159,7 +155,7 @@ func TestBuilder_AddBundles_InvalidParams(t *testing.T) {
 	require.Len(t, res, 1)
 	require.False(t, res[0].Success)
 	require.Equal(t, ErrInvalidBlockNumber.Error(), res[0].Error)
-	require.Len(t, res[0].SimulateTransactionResults, 0)
+	require.Len(t, res[0].Logs, 0)
 	require.Equal(t, big.NewInt(0), builder.env.state.GetBalance(testUserAddress))
 
 	bundle = &suavextypes.Bundle{
@@ -173,7 +169,7 @@ func TestBuilder_AddBundles_InvalidParams(t *testing.T) {
 	require.Len(t, res, 1)
 	require.False(t, res[0].Success)
 	require.Equal(t, ErrExceedsMaxBlock.Error(), res[0].Error)
-	require.Len(t, res[0].SimulateTransactionResults, 0)
+	require.Len(t, res[0].Logs, 0)
 	require.Equal(t, big.NewInt(0), builder.env.state.GetBalance(testUserAddress))
 
 	bundle = &suavextypes.Bundle{
@@ -184,7 +180,7 @@ func TestBuilder_AddBundles_InvalidParams(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res[0].Success)
 	require.Equal(t, ErrEmptyTxs.Error(), res[0].Error)
-	require.Len(t, res[0].SimulateTransactionResults, 0)
+	require.Len(t, res[0].Logs, 0)
 	require.Equal(t, big.NewInt(0), builder.env.state.GetBalance(testUserAddress))
 }
 
