@@ -299,12 +299,10 @@ func newMockBuilderConfig(t *testing.T) (*BuilderConfig, *testWorkerBackend) {
 	engine := clique.New(config.Clique, db)
 
 	w, backend := newTestWorker(t, &config, engine, db, 0)
-	w.close()
 
 	bConfig := &BuilderConfig{
 		ChainConfig: w.chainConfig,
 		Engine:      w.engine,
-		EthBackend:  w.eth,
 		Chain:       w.chain,
 		GasCeil:     10000000,
 	}

@@ -75,7 +75,6 @@ func (s *SessionManager) newBuilder(args *api.BuildBlockArgs) (*miner.Builder, e
 		ChainConfig: s.blockchain.Config(),
 		Engine:      s.blockchain.Engine(),
 		Chain:       s.blockchain,
-		EthBackend:  s,
 		GasCeil:     s.config.GasCeil,
 	}
 
