@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	suavextypes "github.com/ethereum/go-ethereum/suave/builder/api"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -27,6 +29,7 @@ var (
 	ErrInvalidBlockNumber    = errors.New("invalid block number")
 	ErrExceedsMaxBlock       = errors.New("block number exceeds max block")
 	ErrEmptyTxs              = errors.New("empty transactions")
+	ErrInvalidRefundPercent  = errors.New("refund percent should be between 0 and 99 inclusive")
 )
 
 type BuilderConfig struct {
@@ -46,10 +49,12 @@ type BuilderArgs struct {
 }
 
 type Builder struct {
-	env   *environment
-	wrk   *worker
-	args  *BuilderArgs
-	block *types.Block
+	env              *environment
+	wrk              *worker
+	args             *BuilderArgs
+	block            *types.Block
+	ephemeralPrivKey *ecdsa.PrivateKey
+	ephemeralAddr    common.Address
 }
 
 func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
@@ -80,6 +85,11 @@ func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
 
 	env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	b.env = env
+	b.ephemeralPrivKey, err = crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	b.ephemeralAddr = crypto.PubkeyToAddress(b.ephemeralPrivKey.PublicKey)
 
 	return b, nil
 }
@@ -130,8 +140,16 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 
 	revertingHashes := bundle.RevertingHashesMap()
 	egp := uint64(0)
+	feeRecipient := env.coinbase
+
+	if bundle.HasRefund() {
+		// set coinbase to the ephemeral address to collect bundle profit
+		env.coinbase = b.ephemeralAddr
+	}
 
 	var results []*suavextypes.SimulateTransactionResult
+
+	profitPreBundle := env.state.GetBalance(env.coinbase)
 	for _, txn := range bundle.Txs {
 		result, err := b.addTransaction(txn, env)
 		results = append(results, result)
@@ -140,20 +158,64 @@ func (b *Builder) addBundle(bundle *suavextypes.Bundle, env *environment) (*suav
 				// continue if the transaction is in the reverting hashes
 				continue
 			}
-			return &suavextypes.SimulateBundleResult{
-				Error:                      err.Error(),
-				SimulateTransactionResults: results,
-				Success:                    false,
-			}, err
+			return makeBundleSimResult(results, egp, err), err
 		}
 		egp += result.Egp
 	}
+	profitPostBundle := env.state.GetBalance(env.coinbase)
+	// reset coinbase to the original fee recipient
+	env.coinbase = feeRecipient
 
-	return &suavextypes.SimulateBundleResult{
-		Egp:                        egp,
-		SimulateTransactionResults: results,
-		Success:                    true,
-	}, nil
+	if bundle.HasRefund() {
+		tx, err := b.getRefundTx(bundle, env, profitPreBundle, profitPostBundle, feeRecipient)
+		if err != nil {
+			return makeBundleSimResult(results, egp, err), err
+		}
+
+		_, err = b.addTransaction(tx, env)
+		if err != nil {
+			return makeBundleSimResult(results, egp, err), err
+		}
+	}
+
+	return makeBundleSimResult(results, egp, nil), nil
+}
+
+func (b *Builder) getRefundTx(bundle *suavextypes.Bundle, env *environment, profitPreBundle *big.Int, profitPostBundle *big.Int, feeRecipient common.Address) (*types.Transaction, error) {
+	if !(len(bundle.Txs) > 1 && bundle.RefundPercent != nil) {
+		return nil, errors.New("refund is not possible with the given bundle")
+	}
+
+	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), env.header.BaseFee)
+	refundPrct := *bundle.RefundPercent
+	if refundPrct == 0 {
+		refundPrct = 10
+	}
+
+	bundleProfit := new(big.Int).Sub(profitPostBundle, profitPreBundle)
+	refundAmt := new(big.Int).Mul(bundleProfit, big.NewInt(int64(refundPrct)))
+	refundAmt = new(big.Int).Div(refundAmt, big.NewInt(100))
+	refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
+	userTx := bundle.Txs[0]
+	refundAddr, err := types.Sender(types.LatestSignerForChainID(userTx.ChainId()), userTx)
+	if err != nil {
+		return nil, err
+	}
+
+	currNonce := env.state.GetNonce(b.ephemeralAddr)
+	paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    currNonce,
+		To:       &refundAddr,
+		Value:    refundAmt,
+		Gas:      28000,
+		GasPrice: env.header.BaseFee,
+	}), env.signer, b.ephemeralPrivKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return paymentTx, nil
 }
 
 func (b *Builder) AddBundles(bundles []*suavextypes.Bundle) ([]*suavextypes.SimulateBundleResult, error) {
@@ -185,6 +247,29 @@ func (b *Builder) FillPending() error {
 
 func (b *Builder) BuildBlock() (*types.Block, error) {
 	work := b.env
+
+	// check if ephemeral address has profit and transfer it to the fee recipient
+	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), work.header.BaseFee)
+	profit := work.state.GetBalance(b.ephemeralAddr)
+	profit = new(big.Int).Sub(profit, refundTransferCost)
+	if profit.Cmp(big.NewInt(0)) > 0 {
+		currNonce := work.state.GetNonce(b.ephemeralAddr)
+		paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+			Nonce:    currNonce,
+			To:       &work.coinbase,
+			Value:    profit,
+			Gas:      28000,
+			GasPrice: work.header.BaseFee,
+		}), work.signer, b.ephemeralPrivKey)
+
+		if err != nil {
+			return nil, err
+		}
+		_, err = b.wrk.commitTransaction(work, paymentTx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	block, err := b.wrk.engine.FinalizeAndAssemble(b.wrk.chain, work.header, work.state, work.txs, nil, work.receipts, nil)
 	if err != nil {
@@ -262,6 +347,22 @@ func receiptToSimResult(receipt *types.Receipt, egp uint64) *suavextypes.Simulat
 	return result
 }
 
+func makeBundleSimResult(txSimResults []*suavextypes.SimulateTransactionResult, egp uint64, err error) *suavextypes.SimulateBundleResult {
+	if err == nil {
+		return &suavextypes.SimulateBundleResult{
+			Egp:                        egp,
+			SimulateTransactionResults: txSimResults,
+			Success:                    true,
+		}
+	}
+
+	return &suavextypes.SimulateBundleResult{
+		Error:                      err.Error(),
+		SimulateTransactionResults: txSimResults,
+		Success:                    false,
+	}
+}
+
 func executableDataToDenebExecutionPayload(data *engine.ExecutableData) (*deneb.ExecutionPayload, error) {
 	transactionData := make([]bellatrix.Transaction, len(data.Transactions))
 	for i, tx := range data.Transactions {
@@ -327,6 +428,12 @@ func checkBundleParams(currentBlockNumber *big.Int, bundle *suavextypes.Bundle) 
 	// check if the bundle has transactions
 	if bundle.Txs == nil || bundle.Txs.Len() == 0 {
 		return ErrEmptyTxs
+	}
+
+	// check if refund percent is valid
+	// https: //github.com/flashbots/mev-share/blob/main/specs/bundles/refund-recipient.md#refundpercent
+	if bundle.RefundPercent != nil && (*bundle.RefundPercent < 0 || *bundle.RefundPercent > 99) {
+		return ErrInvalidRefundPercent
 	}
 
 	return nil

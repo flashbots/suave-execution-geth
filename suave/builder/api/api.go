@@ -32,6 +32,10 @@ func (bundle *Bundle) RevertingHashesMap() map[common.Hash]struct{} {
 	return m
 }
 
+func (bundle *Bundle) HasRefund() bool {
+	return len(bundle.Txs) > 1 && bundle.RefundPercent != nil
+}
+
 type BuildBlockArgs struct {
 	Slot           uint64              `json:"slot"`
 	ProposerPubkey []byte              `json:"proposerPubkey"`
