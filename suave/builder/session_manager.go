@@ -74,7 +74,7 @@ func (s *SessionManager) newBuilder(args *api.BuildBlockArgs) (*miner.Builder, e
 	builderCfg := &miner.BuilderConfig{
 		ChainConfig: s.blockchain.Config(),
 		Engine:      s.blockchain.Engine(),
-		Chain:       s.blockchain,
+		EthBackend:  s,
 		GasCeil:     s.config.GasCeil,
 	}
 
@@ -136,7 +136,7 @@ func (s *SessionManager) NewSession(ctx context.Context, args *api.BuildBlockArg
 }
 
 func (s *SessionManager) getSession(sessionId string, allowOnTheFlySession bool) (*miner.Builder, error) {
-	if sessionId == "" {
+	if sessionId == "" && allowOnTheFlySession {
 		return s.newBuilder(&api.BuildBlockArgs{})
 	}
 

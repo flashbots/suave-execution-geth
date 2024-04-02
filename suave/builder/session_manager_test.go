@@ -142,7 +142,8 @@ type testBackend struct {
 
 func (tb *testBackend) newTransfer(t *testing.T, to common.Address, amount *big.Int) *types.Transaction {
 	gasPrice := big.NewInt(10 * params.InitialBaseFee)
-	tx, _ := types.SignTx(types.NewTransaction(tb.pool.Nonce(testBankAddress), to, amount, params.TxGas, gasPrice, nil), types.HomesteadSigner{}, testBankKey)
+	tx, err := types.SignTx(types.NewTransaction(tb.pool.Nonce(testBankAddress), to, amount, params.TxGas, gasPrice, nil), types.HomesteadSigner{}, testBankKey)
+	require.NoError(t, err)
 	return tx
 }
 
@@ -160,7 +161,7 @@ func newTestBackend(t *testing.T) *testBackend {
 
 	var gspec = &core.Genesis{
 		Config: &config,
-		Alloc:  core.GenesisAlloc{testBankAddress: {Balance: big.NewInt(1000000000000000000)}},
+		Alloc:  types.GenesisAlloc{testBankAddress: {Balance: big.NewInt(1000000000000000000)}},
 	}
 
 	gspec.ExtraData = make([]byte, 32+common.AddressLength+crypto.SignatureLength)

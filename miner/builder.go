@@ -32,7 +32,7 @@ var (
 type BuilderConfig struct {
 	ChainConfig *params.ChainConfig
 	Engine      consensus.Engine
-	Chain       *core.BlockChain
+	EthBackend  Backend
 	GasCeil     uint64
 }
 
@@ -62,7 +62,8 @@ func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
 		},
 		chainConfig: config.ChainConfig,
 		engine:      config.Engine,
-		chain:       config.Chain,
+		chain:       config.EthBackend.BlockChain(),
+		txpool:      config.EthBackend.TxPool(),
 	}
 
 	workerParams := &generateParams{
