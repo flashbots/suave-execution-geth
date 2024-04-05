@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	builder "github.com/ethereum/go-ethereum/suave/builder/api"
@@ -34,10 +33,6 @@ func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.Buil
 	}
 	block := types.NewBlock(&types.Header{GasUsed: 1000}, txs, nil, nil, trie.NewStackTrie(nil))
 	return engine.BlockToExecutableData(block, big.NewInt(11000), nil), nil
-}
-
-func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
-	return nil, nil
 }
 
 type RemoteEthBackend struct {
@@ -90,11 +85,4 @@ func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	err := e.CallContext(ctx, &result, "suavex_buildEthBlockFromBundles", args, bundles)
 
 	return &result, err
-}
-
-func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
-	var result []byte
-	err := e.CallContext(ctx, &result, "suavex_call", contractAddr, input)
-
-	return result, err
 }

@@ -14,7 +14,6 @@ import (
 type EthBackend interface {
 	BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
-	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
 
 var _ EthBackend = &EthBackendServer{}
@@ -25,7 +24,6 @@ type EthBackendServerBackend interface {
 	CurrentHeader() *types.Header
 	BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error)
 	BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error)
-	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
 
 type EthBackendServer struct {
@@ -57,7 +55,11 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 	}
 
 	// TODO: we're not adding blobs, but this is not where you would do it anyways
+<<<<<<< Updated upstream
 	return engine.BlockToExecutableData(block, profit, nil), nil
+=======
+	return engine.BlockToExecutableData(block, profit, getSidecars(block)), nil
+>>>>>>> Stashed changes
 }
 
 func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
@@ -84,6 +86,18 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 	return engine.BlockToExecutableData(block, profit, nil), nil
 }
 
+<<<<<<< Updated upstream
 func (e *EthBackendServer) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
 	return e.b.Call(ctx, contractAddr, input)
+=======
+func getSidecars(block *types.Block) []*types.BlobTxSidecar {
+	sidecars := []*types.BlobTxSidecar{}
+	for _, tx := range block.Transactions() {
+		sidecar := tx.BlobTxSidecar()
+		if sidecar != nil {
+			sidecars = append(sidecars, sidecar)
+		}
+	}
+	return sidecars
+>>>>>>> Stashed changes
 }
