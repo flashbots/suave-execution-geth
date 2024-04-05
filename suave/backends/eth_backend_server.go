@@ -56,7 +56,6 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 		return nil, err
 	}
 
-	// TODO: we're not adding blobs, but this is not where you would do it anyways
 	return engine.BlockToExecutableData(block, profit, getSidecars(block)), nil
 }
 
@@ -80,7 +79,6 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 		return nil, err
 	}
 
-	// TODO: we're not adding blobs, but this is not where you would do it anyways
 	return engine.BlockToExecutableData(block, profit, getSidecars(block)), nil
 }
 
