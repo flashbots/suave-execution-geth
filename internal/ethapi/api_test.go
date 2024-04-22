@@ -621,18 +621,18 @@ func (b testBackend) ServiceFilter(ctx context.Context, session *bloombits.Match
 	panic("implement me")
 }
 
-func (n *testBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (n *testBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, []*types.BlobTxSidecar, error) {
 	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
-	return block, big.NewInt(11000), nil
+	return block, big.NewInt(11000), nil, nil
 }
 
-func (n *testBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (n *testBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, []*types.BlobTxSidecar, error) {
 	var txs types.Transactions
 	for _, bundle := range bundles {
 		txs = append(txs, bundle.Txs...)
 	}
 	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
-	return block, big.NewInt(11000), nil
+	return block, big.NewInt(11000), nil, nil
 }
 
 func (n *testBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {

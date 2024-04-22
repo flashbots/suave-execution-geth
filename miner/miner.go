@@ -165,10 +165,10 @@ func (miner *Miner) getPending() *newPayloadResult {
 	return ret
 }
 
-func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, []*types.BlobTxSidecar, error) {
 	return miner.buildBlockFromTxs(ctx, buildArgs, txs)
 }
 
-func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, []*types.BlobTxSidecar, error) {
 	return miner.buildBlockFromBundles(ctx, buildArgs, bundles)
 }

@@ -72,7 +72,7 @@ func (miner *Miner) commitPendingTxs(work *environment) error {
 	return nil
 }
 
-func (miner *Miner) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+func (miner *Miner) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, []*types.BlobTxSidecar, error) {
 	params := &generateParams{
 		timestamp:   args.Timestamp,
 		forceTime:   true,
@@ -88,36 +88,37 @@ func (miner *Miner) buildBlockFromTxs(ctx context.Context, args *types.BuildBloc
 
 	work, err := miner.prepareWork(params)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	profitPre := work.state.GetBalance(args.FeeRecipient)
 
 	if err := miner.rawCommitTransactions(work, txs); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if args.FillPending {
 		if err := miner.commitPendingTxs(work); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
 	profitPost := work.state.GetBalance(args.FeeRecipient)
 	// TODO : Is it okay to set Uncle List to nil?
 	body := types.Body{Transactions: work.txs, Withdrawals: params.withdrawals}
+	sidecars := envSidecars(work)
 	block, err := miner.engine.FinalizeAndAssemble(miner.chain, work.header, work.state, &body, work.receipts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	blockProfit := new(big.Int).Sub(profitPost.ToBig(), profitPre.ToBig())
-	return block, blockProfit, nil
+	return block, blockProfit, sidecars, nil
 }
 
-func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, []*types.BlobTxSidecar, error) {
 	// create ephemeral addr and private key for payment txn
 	ephemeralPrivKey, err := crypto.GenerateKey()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	ephemeralAddr := crypto.PubkeyToAddress(ephemeralPrivKey.PublicKey)
 
@@ -136,7 +137,7 @@ func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.Build
 
 	work, err := miner.prepareWork(params)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Assume static 28000 gas transfers for both mev-share and proposer payments
@@ -150,7 +151,7 @@ func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.Build
 		// apply bundle
 		profitPreBundle := work.state.GetBalance(params.coinbase)
 		if err := miner.rawCommitTransactions(work, bundle.Txs); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		profitPostBundle := work.state.GetBalance(params.coinbase)
 
@@ -173,7 +174,7 @@ func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.Build
 			userTx := bundle.Txs[0] // NOTE : assumes first txn is refund recipient
 			refundAddr, err := types.Sender(types.LatestSignerForChainID(userTx.ChainId()), userTx)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
 				Nonce:    currNonce,
@@ -184,18 +185,18 @@ func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.Build
 			}), work.signer, ephemeralPrivKey)
 
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 
 			// commit payment txn
 			if err := miner.rawCommitTransactions(work, types.Transactions{paymentTx}); err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 		}
 	}
 	if args.FillPending {
 		if err := miner.commitPendingTxs(work); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -213,20 +214,31 @@ func (miner *Miner) buildBlockFromBundles(ctx context.Context, args *types.Build
 		GasPrice: work.header.BaseFee,
 	}), work.signer, ephemeralPrivKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
+		return nil, nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
 	}
 
 	// commit payment txn
 	if err := miner.rawCommitTransactions(work, types.Transactions{paymentTx}); err != nil {
-		return nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
+		return nil, nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
 	}
 
 	log.Info("buildBlockFromBundles", "num_bundles", len(bundles), "num_txns", len(work.txs), "profit", proposerProfit)
 	// TODO : Is it okay to set Uncle List to nil?
 	body := types.Body{Transactions: work.txs, Withdrawals: params.withdrawals}
+	sidecars := envSidecars(work)
 	block, err := miner.engine.FinalizeAndAssemble(miner.chain, work.header, work.state, &body, work.receipts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return block, proposerProfit, nil
+	return block, proposerProfit, sidecars, nil
+}
+
+func envSidecars(env *environment) []*types.BlobTxSidecar {
+	sidecars := []*types.BlobTxSidecar{}
+	for _, tx := range env.txs {
+		if tx.Type() == 0x03 {
+			sidecars = append(sidecars, env.sidecars[len(sidecars)])
+		}
+	}
+	return sidecars
 }
