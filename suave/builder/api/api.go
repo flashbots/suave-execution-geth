@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
 // TODO: Can we aggregate all the gencodec generation into a single file?
@@ -97,4 +98,5 @@ type API interface {
 	BuildBlock(ctx context.Context, sessionId string) error
 	Bid(ctx context.Context, sessioId string, blsPubKey phase0.BLSPubKey) (*SubmitBlockRequest, error)
 	GetBalance(ctx context.Context, sessionId string, addr common.Address) (*big.Int, error)
+	Call(ctx context.Context, sessionId string, transactionArgs *ethapi.TransactionArgs) ([]byte, error)
 }
