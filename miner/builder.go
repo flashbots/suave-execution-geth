@@ -223,7 +223,6 @@ func (b *Builder) Call(args *ethapi.TransactionArgs) ([]byte, error) {
 	if err != nil {
 		return result.ReturnData, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
 	}
-	fmt.Println("ReturnData", result.ReturnData)
 	return result.ReturnData, nil
 }
 

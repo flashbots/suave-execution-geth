@@ -98,5 +98,5 @@ type API interface {
 	BuildBlock(ctx context.Context, sessionId string) error
 	Bid(ctx context.Context, sessioId string, blsPubKey phase0.BLSPubKey) (*SubmitBlockRequest, error)
 	GetBalance(ctx context.Context, sessionId string, addr common.Address) (*big.Int, error)
-	Call(ctx context.Context, sessionId string, transactionArgs *ethapi.TransactionArgs) ([]byte, error)
+	Call(ctx context.Context, sessionId string, transactionArgs *ethapi.TransactionArgs) (hexutil.Bytes, error)
 }
