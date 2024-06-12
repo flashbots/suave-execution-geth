@@ -75,6 +75,6 @@ func (a *APIClient) GetBalance(ctx context.Context, sessionId string, addr commo
 
 func (a *APIClient) Call(ctx context.Context, sessionId string, transactionArgs *ethapi.TransactionArgs) ([]byte, error) {
 	var result []byte
-	err := a.rpc.CallContext(ctx, &result, "suavex_call", sessionId, transactionArgs)
+	err := a.rpc.CallContext(ctx, result, "suavex_call", sessionId, transactionArgs)
 	return result, err
 }
