@@ -212,7 +212,6 @@ func (b *Builder) Call(args *ethapi.TransactionArgs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("ddd", err)
 	if err := state_copy.Error(); err != nil {
 		return nil, err
 	}
@@ -220,10 +219,11 @@ func (b *Builder) Call(args *ethapi.TransactionArgs) ([]byte, error) {
 	if evm.Cancelled() {
 		return nil, fmt.Errorf("execution aborted")
 	}
-	fmt.Println("result", result)
+
 	if err != nil {
 		return result.ReturnData, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
 	}
+	fmt.Println("ReturnData", result.ReturnData)
 	return result.ReturnData, nil
 }
 
