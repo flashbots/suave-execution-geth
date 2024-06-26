@@ -60,6 +60,7 @@ import (
 	"github.com/ethereum/go-ethereum/suave/backends"
 	suave_builder "github.com/ethereum/go-ethereum/suave/builder"
 	suave_builder_api "github.com/ethereum/go-ethereum/suave/builder/api"
+	beacon_sidecar "github.com/ethereum/go-ethereum/suave/builder/beacon_sidecar"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -329,7 +330,12 @@ func (s *Ethereum) APIs() []rpc.API {
 		Service:   backends.NewEthBackendServer(s.APIBackend),
 	})
 
-	sessionManager := suave_builder.NewSessionManager(s.blockchain, s.txPool, &suave_builder.Config{})
+	beaconSidecar := &beacon_sidecar.BeaconSidecar{}
+	if s.config.BeaconRpc != "" && s.config.BoostRelayUrl != "" {
+		beaconSidecar = beacon_sidecar.NewBeaconSidecar(s.config.BeaconRpc, s.config.BoostRelayUrl)
+	}
+
+	sessionManager := suave_builder.NewSessionManager(s.blockchain, s.txPool, &suave_builder.Config{}, beaconSidecar)
 
 	apis = append(apis, rpc.API{
 		Namespace: "suavex",

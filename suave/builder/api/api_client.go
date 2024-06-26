@@ -6,7 +6,9 @@ import (
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -70,4 +72,10 @@ func (a *APIClient) GetBalance(ctx context.Context, sessionId string, addr commo
 	var balance *big.Int
 	err := a.rpc.CallContext(ctx, &balance, "suavex_getBalance", sessionId, addr)
 	return balance, err
+}
+
+func (a *APIClient) Call(ctx context.Context, sessionId string, transactionArgs *ethapi.TransactionArgs) (hexutil.Bytes, error) {
+	var result []byte
+	err := a.rpc.CallContext(ctx, result, "suavex_call", sessionId, transactionArgs)
+	return result, err
 }

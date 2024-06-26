@@ -11,11 +11,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/params"
 	suavextypes "github.com/ethereum/go-ethereum/suave/builder/api"
 	"github.com/stretchr/testify/require"
@@ -288,6 +290,36 @@ func TestBuilder_Balance(t *testing.T) {
 
 	balance2 := builder.GetBalance(testBankAddress)
 	require.NotEqual(t, balance2, testBankFunds)
+}
+
+func TestBuilder_Call(t *testing.T) {
+	t.Parallel()
+
+	config, backend := newMockBuilderConfig(t)
+
+	builder, err := NewBuilder(config, &BuilderArgs{})
+	require.NoError(t, err)
+
+	input, err := suaveExample1Artifact.Abi.Pack("increment")
+	require.NoError(t, err)
+	tx := backend.newCall(suaveExample1Addr, input)
+
+	simResult, err := builder.AddTransaction(tx)
+	require.NoError(t, err)
+	require.True(t, simResult.Success)
+
+	input2, err2 := suaveExample1Artifact.Abi.Pack("counter")
+	require.NoError(t, err2)
+	hexInput := hexutil.Bytes(input2)
+	args := ethapi.TransactionArgs{
+		To:   &suaveExample1Addr,
+		Data: &hexInput,
+	}
+	result, error := builder.Call(&args)
+	require.NoError(t, error)
+	result_new, error := suaveExample1Artifact.Abi.Unpack("counter", result)
+	require.NoError(t, error)
+	require.Equal(t, result_new[0].(*big.Int).Int64(), int64(1))
 }
 
 func newMockBuilderConfig(t *testing.T) (*BuilderConfig, *testWorkerBackend) {

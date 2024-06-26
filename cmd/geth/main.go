@@ -207,6 +207,11 @@ var (
 		utils.MetricsInfluxDBBucketFlag,
 		utils.MetricsInfluxDBOrganizationFlag,
 	}
+
+	suaveFlags = []cli.Flag{
+		utils.SuaveBeaconRpcFlag,
+		utils.SuaveBoostRelayUrlFlag,
+	}
 )
 
 var app = flags.NewApp("the go-ethereum command line interface")
@@ -258,6 +263,7 @@ func init() {
 		consoleFlags,
 		debug.Flags,
 		metricsFlags,
+		suaveFlags,
 	)
 	flags.AutoEnvVars(app.Flags, "GETH")
 

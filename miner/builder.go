@@ -3,6 +3,7 @@ package miner
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	denebBuilder "github.com/attestantio/go-builder-client/api/deneb"
@@ -16,6 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/params"
 	suavextypes "github.com/ethereum/go-ethereum/suave/builder/api"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -38,11 +41,17 @@ type BuilderConfig struct {
 }
 
 type BuilderArgs struct {
-	ParentHash     common.Hash
-	FeeRecipient   common.Address
-	ProposerPubkey []byte
-	Extra          []byte
-	Slot           uint64
+	Slot            uint64
+	ProposerPubkey  []byte
+	ParentHash      common.Hash
+	Timestamp       uint64
+	FeeRecipient    common.Address
+	GasLimit        uint64
+	Random          common.Hash
+	Withdrawals     []*types.Withdrawal
+	ParentBlockRoot common.Hash
+
+	Extra []byte
 }
 
 type Builder struct {
@@ -68,10 +77,14 @@ func NewBuilder(config *BuilderConfig, args *BuilderArgs) (*Builder, error) {
 	}
 
 	workerParams := &generateParams{
-		parentHash: args.ParentHash,
-		forceTime:  false,
-		coinbase:   args.FeeRecipient,
-		extra:      args.Extra,
+		timestamp:   args.Timestamp,
+		forceTime:   false,
+		parentHash:  args.ParentHash,
+		coinbase:    args.FeeRecipient,
+		random:      args.Random,
+		withdrawals: args.Withdrawals,
+		beaconRoot:  &args.ParentBlockRoot,
+		extra:       args.Extra,
 	}
 	env, err := b.wrk.prepareWork(workerParams)
 	if err != nil {
@@ -174,6 +187,49 @@ func (b *Builder) AddBundles(bundles []*suavextypes.Bundle) ([]*suavextypes.Simu
 
 func (b *Builder) GetBalance(addr common.Address) *big.Int {
 	return b.env.state.GetBalance(addr).ToBig()
+}
+
+type ChainContextDummy struct {
+}
+
+func (c *ChainContextDummy) Engine() consensus.Engine {
+	panic("not implemented")
+}
+
+func (c *ChainContextDummy) GetHeader(common.Hash, uint64) *types.Header {
+	panic("not implemented")
+}
+
+func (b *Builder) Call(args *ethapi.TransactionArgs) ([]byte, error) {
+	error := args.CallDefaults(0, common.Big0, b.wrk.chainConfig.ChainID)
+	if error != nil {
+		return nil, error
+	}
+
+	msg := args.ToMessage(common.Big0)
+	blockContext := core.NewEVMBlockContext(b.env.header, &ChainContextDummy{}, &common.MaxAddress)
+	txContext := core.NewEVMTxContext(msg)
+
+	state_copy := b.env.state.Copy()
+	evm := vm.NewEVM(blockContext, txContext, state_copy, b.wrk.chainConfig, vm.Config{NoBaseFee: true})
+
+	gp := new(core.GasPool).AddGas(math.MaxUint64)
+	result, err := core.ApplyMessage(evm, msg, gp)
+	if err != nil {
+		return nil, err
+	}
+	if err := state_copy.Error(); err != nil {
+		return nil, err
+	}
+
+	if evm.Cancelled() {
+		return nil, fmt.Errorf("execution aborted")
+	}
+
+	if err != nil {
+		return result.ReturnData, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
+	}
+	return result.ReturnData, nil
 }
 
 func (b *Builder) FillPending() error {

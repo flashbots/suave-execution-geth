@@ -8,6 +8,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/require"
 )
@@ -69,4 +70,8 @@ func (nullSessionManager) Bid(sessioId string, blsPubKey phase0.BLSPubKey) (*Sub
 
 func (nullSessionManager) GetBalance(sessionId string, addr common.Address) (*big.Int, error) {
 	return big.NewInt(0), nil
+}
+
+func (nullSessionManager) Call(sessionId string, args *ethapi.TransactionArgs) ([]byte, error) {
+	return nil, nil
 }

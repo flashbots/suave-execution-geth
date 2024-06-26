@@ -91,10 +91,3 @@ func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 
 	return &result, err
 }
-
-func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
-	var result []byte
-	err := e.CallContext(ctx, &result, "suavex_call", contractAddr, input)
-
-	return result, err
-}

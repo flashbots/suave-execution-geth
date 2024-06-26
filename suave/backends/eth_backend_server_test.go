@@ -27,9 +27,6 @@ func TestEthBackend_Compatibility(t *testing.T) {
 
 	_, err = clt.BuildEthBlockFromBundles(context.Background(), &types.BuildBlockArgs{}, nil)
 	require.NoError(t, err)
-
-	_, err = clt.Call(context.Background(), common.Address{}, nil)
-	require.NoError(t, err)
 }
 
 // mockBackend is a backend for the EthBackendServer that returns mock data
