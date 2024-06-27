@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	suavextypes "github.com/ethereum/go-ethereum/suave/builder/api"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -183,12 +184,12 @@ type ChainContextDummy struct {
 }
 
 func (c *ChainContextDummy) Engine() consensus.Engine {
-	panic("not implemented")
+	log.Error("Engine not implemented for ChainContextDummy")
 	return nil
 }
 
 func (c *ChainContextDummy) GetHeader(common.Hash, uint64) *types.Header {
-	panic("not implemented")
+	log.Error("GetHeader not implemented for ChainContextDummy")
 	return nil
 }
 
