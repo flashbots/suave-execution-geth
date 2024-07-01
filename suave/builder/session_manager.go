@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/builder/api"
@@ -243,4 +244,14 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 
 		return math.BigMax(baseFee, common.Big0)
 	}
+}
+
+func (s *SessionManager) Call(sessionId string, tx_args *ethapi.TransactionArgs) ([]byte, error) {
+	builder, err := s.getSession(sessionId, false)
+	if err != nil {
+		return nil, err
+	}
+	result, err := builder.Call(tx_args)
+
+	return result, err
 }

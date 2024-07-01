@@ -6,7 +6,9 @@ import (
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
 var _ API = (*Server)(nil)
@@ -20,6 +22,7 @@ type SessionManager interface {
 	BuildBlock(sessionId string) error
 	Bid(sessionId string, blsPubKey phase0.BLSPubKey) (*SubmitBlockRequest, error)
 	GetBalance(sessionId string, addr common.Address) (*big.Int, error)
+	Call(sessionId string, transactionArgs *ethapi.TransactionArgs) ([]byte, error)
 }
 
 func NewServer(s SessionManager) *Server {
@@ -59,6 +62,14 @@ func (s *Server) Bid(ctx context.Context, sessionId string, blsPubKey phase0.BLS
 
 func (s *Server) GetBalance(ctx context.Context, sessionId string, addr common.Address) (*big.Int, error) {
 	return s.sessionMngr.GetBalance(sessionId, addr)
+}
+
+func (s *Server) Call(ctx context.Context, sessionId string, transactionArgs *ethapi.TransactionArgs) (hexutil.Bytes, error) {
+	res, err := s.sessionMngr.Call(sessionId, transactionArgs)
+	if err != nil {
+		return nil, err
+	}
+	return hexutil.Bytes(res), nil
 }
 
 // TODO: Remove
