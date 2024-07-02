@@ -127,7 +127,7 @@ func newSessionManager(t *testing.T, cfg *Config) (*SessionManager, *testBackend
 	if cfg == nil {
 		cfg = &Config{}
 	}
-	return NewSessionManager(backend.chain, backend.pool, cfg), backend
+	return NewSessionManager(backend.chain, backend.pool, cfg, nil), backend
 }
 
 var (
