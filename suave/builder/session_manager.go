@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,6 +28,36 @@ type Config struct {
 	MaxConcurrentSessions int
 }
 
+func NewConfig() *Config {
+	cfg := &Config{
+		GasCeil:               1000000000000000000,
+		SessionIdleTimeout:    5 * time.Second,
+		MaxConcurrentSessions: 16,
+	}
+
+	// apply env if exists
+	var err error
+	if valStr := os.Getenv("GAS_CEIL"); valStr != "" {
+		if cfg.GasCeil, err = strconv.ParseUint(valStr, 10, 64); err != nil {
+			panic(fmt.Sprintf("failed to parse GAS_CEIL flag as uint: %v", err))
+		}
+	}
+
+	if valStr := os.Getenv("SESSION_IDLE_TIMEOUT"); valStr != "" {
+		if cfg.SessionIdleTimeout, err = time.ParseDuration(valStr); err != nil {
+			panic(fmt.Sprintf("failed to parse SESSION_IDLE_TIMEOUT flag as duration: %v", err))
+		}
+	}
+
+	if valStr := os.Getenv("MAX_CONCURRENT_SESSIONS"); valStr != "" {
+		if cfg.MaxConcurrentSessions, err = strconv.Atoi(valStr); err != nil {
+			panic(fmt.Sprintf("failed to parse MAX_CONCURRENT_SESSIONS flag as int: %v", err))
+		}
+	}
+
+	return cfg
+}
+
 type SessionManager struct {
 	sem           chan struct{}
 	sessions      map[string]*miner.Builder
@@ -37,14 +69,8 @@ type SessionManager struct {
 }
 
 func NewSessionManager(blockchain *core.BlockChain, pool *txpool.TxPool, config *Config) *SessionManager {
-	if config.GasCeil == 0 {
-		config.GasCeil = 1000000000000000000
-	}
-	if config.SessionIdleTimeout == 0 {
-		config.SessionIdleTimeout = 5 * time.Second
-	}
-	if config.MaxConcurrentSessions <= 0 {
-		config.MaxConcurrentSessions = 16 // chosen arbitrarily
+	if config == nil {
+		panic("empty session manager config")
 	}
 
 	sem := make(chan struct{}, config.MaxConcurrentSessions)

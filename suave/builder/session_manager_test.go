@@ -22,9 +22,9 @@ import (
 )
 
 func TestSessionManager_SessionTimeout(t *testing.T) {
-	mngr, _ := newSessionManager(t, &Config{
-		SessionIdleTimeout: 500 * time.Millisecond,
-	})
+	config := NewConfig()
+	config.SessionIdleTimeout = 500 * time.Millisecond
+	mngr, _ := newSessionManager(t, config)
 
 	args := &api.BuildBlockArgs{}
 
@@ -43,10 +43,10 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 	const d = time.Millisecond * 100
 	args := &api.BuildBlockArgs{}
 
-	mngr, _ := newSessionManager(t, &Config{
-		MaxConcurrentSessions: 1,
-		SessionIdleTimeout:    d,
-	})
+	config := NewConfig()
+	config.MaxConcurrentSessions = 1
+	config.SessionIdleTimeout = d
+	mngr, _ := newSessionManager(t, config)
 
 	t.Run("SessionAvailable", func(t *testing.T) {
 		sess, err := mngr.NewSession(context.TODO(), args)
@@ -76,9 +76,9 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 }
 
 func TestSessionManager_SessionRefresh(t *testing.T) {
-	mngr, _ := newSessionManager(t, &Config{
-		SessionIdleTimeout: 500 * time.Millisecond,
-	})
+	config := NewConfig()
+	config.SessionIdleTimeout = 500 * time.Millisecond
+	mngr, _ := newSessionManager(t, config)
 
 	args := &api.BuildBlockArgs{}
 	id, err := mngr.NewSession(context.TODO(), args)
@@ -103,8 +103,7 @@ func TestSessionManager_SessionRefresh(t *testing.T) {
 }
 
 func TestSessionManager_StartSession(t *testing.T) {
-	// test that the session starts and it can simulate transactions
-	mngr, bMock := newSessionManager(t, &Config{})
+	mngr, bMock := newSessionManager(t, NewConfig())
 
 	args := &api.BuildBlockArgs{}
 	id, err := mngr.NewSession(context.TODO(), args)
