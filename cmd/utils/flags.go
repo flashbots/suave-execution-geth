@@ -954,6 +954,20 @@ Please note that --` + MetricsHTTPFlag.Name + ` must be set to start the server.
 		Value:    metrics.DefaultConfig.InfluxDBOrganization,
 		Category: flags.MetricsCategory,
 	}
+
+	// SUAVE Flags
+	SuaveBoostRelayUrlFlag = &cli.StringFlag{
+		Name:     "suave.eth.boost_relay_url",
+		EnvVars:  []string{"SUAVE_BOOST_RELAY_URL"},
+		Usage:    "API endpoint for the boost relay",
+		Category: flags.SuaveCategory,
+	}
+	SuaveBeaconRpcFlag = &cli.StringFlag{
+		Name:     "suave.eth.beacon_rpc",
+		EnvVars:  []string{"BEACON_RPC"},
+		Usage:    "RPC endpoint for a beacon node",
+		Category: flags.SuaveCategory,
+	}
 )
 
 var (
@@ -1785,6 +1799,15 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 			cfg.EthDiscoveryURLs = SplitAndTrim(urls)
 		}
 	}
+
+	// SUAVE Related
+	if ctx.IsSet(SuaveBoostRelayUrlFlag.Name) {
+		cfg.BoostRelayUrl = ctx.String(SuaveBoostRelayUrlFlag.Name)
+	}
+	if ctx.IsSet(SuaveBeaconRpcFlag.Name) {
+		cfg.BeaconRpc = ctx.String(SuaveBeaconRpcFlag.Name)
+	}
+
 	// Override any default configs for hard coded networks.
 	switch {
 	case ctx.Bool(MainnetFlag.Name):

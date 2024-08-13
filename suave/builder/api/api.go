@@ -42,6 +42,7 @@ type BuildBlockArgs struct {
 	GasLimit       uint64              `json:"gasLimit"`
 	Random         common.Hash         `json:"random"`
 	Withdrawals    []*types.Withdrawal `json:"withdrawals"`
+	BeaconRoot     common.Hash         `json:"beaconRoot"`
 	Extra          []byte              `json:"extra"`
 }
 

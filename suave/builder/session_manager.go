@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"sync"
@@ -14,9 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/builder/api"
+	bs "github.com/ethereum/go-ethereum/suave/builder/beacon_sidecar"
 	"github.com/google/uuid"
 )
 
@@ -27,16 +30,17 @@ type Config struct {
 }
 
 type SessionManager struct {
-	sem           chan struct{}
-	sessions      map[string]*miner.Builder
-	sessionTimers map[string]*time.Timer
-	sessionsLock  sync.RWMutex
-	blockchain    *core.BlockChain
-	pool          *txpool.TxPool
-	config        *Config
+	sem            chan struct{}
+	sessions       map[string]*miner.Builder
+	sessionTimers  map[string]*time.Timer
+	sessionsLock   sync.RWMutex
+	blockchain     *core.BlockChain
+	pool           *txpool.TxPool
+	config         *Config
+	beacon_sidecar *bs.BeaconSidecar
 }
 
-func NewSessionManager(blockchain *core.BlockChain, pool *txpool.TxPool, config *Config) *SessionManager {
+func NewSessionManager(blockchain *core.BlockChain, pool *txpool.TxPool, config *Config, bs *bs.BeaconSidecar) *SessionManager {
 	if config.GasCeil == 0 {
 		config.GasCeil = 1000000000000000000
 	}
@@ -53,12 +57,13 @@ func NewSessionManager(blockchain *core.BlockChain, pool *txpool.TxPool, config 
 	}
 
 	s := &SessionManager{
-		sem:           sem,
-		sessions:      make(map[string]*miner.Builder),
-		sessionTimers: make(map[string]*time.Timer),
-		blockchain:    blockchain,
-		config:        config,
-		pool:          pool,
+		sem:            sem,
+		sessions:       make(map[string]*miner.Builder),
+		sessionTimers:  make(map[string]*time.Timer),
+		blockchain:     blockchain,
+		config:         config,
+		pool:           pool,
+		beacon_sidecar: bs,
 	}
 	return s
 }
@@ -79,20 +84,72 @@ func (s *SessionManager) newBuilder(args *api.BuildBlockArgs) (*miner.Builder, e
 		EthBackend:  s,
 		GasCeil:     s.config.GasCeil,
 	}
+	args = s.builderArgsFromBeaconSidecar(args)
 
 	builderArgs := &miner.BuilderArgs{
-		ParentHash:     args.Parent,
-		FeeRecipient:   args.FeeRecipient,
-		ProposerPubkey: args.ProposerPubkey,
-		Extra:          args.Extra,
-		Slot:           args.Slot,
+		ParentHash:      args.Parent,
+		FeeRecipient:    args.FeeRecipient,
+		ProposerPubkey:  args.ProposerPubkey,
+		Extra:           args.Extra,
+		Slot:            args.Slot,
+		Timestamp:       args.Timestamp,
+		GasLimit:        args.GasLimit,
+		Random:          args.Random,
+		Withdrawals:     args.Withdrawals,
+		ParentBlockRoot: args.BeaconRoot,
 	}
+	jsonArgs, _ := json.Marshal(builderArgs)
+	log.Info("Creating new builder session", "args", string(jsonArgs))
 
 	session, err := miner.NewBuilder(builderCfg, builderArgs)
 	if err != nil {
 		return nil, err
 	}
 	return session, nil
+}
+
+// todo: avoid unnecessary and inefficient copying of args among four different BuilderArgs structs
+func (s *SessionManager) builderArgsFromBeaconSidecar(overrides *api.BuildBlockArgs) *api.BuildBlockArgs {
+	if s.beacon_sidecar == nil {
+		return overrides
+	}
+
+	args := s.beacon_sidecar.GetLatestBeaconBuildBlockArgs()
+	if overrides == nil {
+		args := args.ToBuildBlockArgs()
+		return &args
+	}
+
+	if overrides.Slot == 0 {
+		overrides.Slot = args.Slot
+	}
+
+	if len(overrides.ProposerPubkey) == 0 {
+		overrides.ProposerPubkey = args.ProposerPubkey
+	}
+	if overrides.Parent == (common.Hash{}) {
+		overrides.Parent = args.Parent
+	}
+	if overrides.Timestamp == 0 {
+		overrides.Timestamp = args.Timestamp
+	}
+	if overrides.FeeRecipient == (common.Address{}) {
+		overrides.FeeRecipient = args.FeeRecipient
+	}
+	if overrides.GasLimit == 0 {
+		overrides.GasLimit = args.GasLimit
+	}
+	if overrides.Random == (common.Hash{}) {
+		overrides.Random = args.Random
+	}
+	if len(overrides.Withdrawals) == 0 {
+		overrides.Withdrawals = args.Withdrawals
+	}
+	if overrides.BeaconRoot == (common.Hash{}) {
+		overrides.BeaconRoot = args.ParentBlockRoot
+	}
+
+	return overrides
 }
 
 // NewSession creates a new builder session and returns the session id
