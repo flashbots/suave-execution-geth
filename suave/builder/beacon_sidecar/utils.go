@@ -1,4 +1,4 @@
-// Based on https://github.com/flashbots/suave-geth/blob/892e2e11ba2735cdbc7d7ef694b8942dadaf0bdd/suave/cmd/suavecli/boost_utils.go
+// Partially based on https://github.com/flashbots/suave-geth/blob/892e2e11ba2735cdbc7d7ef694b8942dadaf0bdd/suave/cmd/suavecli/boost_utils.go
 
 package beacon_sidecar
 
@@ -14,55 +14,30 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/r3labs/sse"
+	"github.com/rs/zerolog"
+
+	eth2client "github.com/attestantio/go-eth2-client"
+	eth2apiv1 "github.com/attestantio/go-eth2-client/api/v1"
+	eth2http "github.com/attestantio/go-eth2-client/http"
 )
 
-func SubscribeToPayloadAttributesEvents(ctx context.Context, endpoint string, payloadAttrC chan<- PayloadAttributesEvent) {
-	retries := 100 // todo: make this configurable
-	eventsURL := fmt.Sprintf("%s/eth/v1/events?topics=payload_attributes", endpoint)
-
-	client := sse.NewClient(eventsURL)
-	for i := 0; i < retries; i++ {
-		select {
-		case <-ctx.Done():
-			log.Info("Stopping subscription to payload_attributes events")
-			return
-		default:
-			err := client.SubscribeRawWithContext(ctx, func(msg *sse.Event) {
-				var payloadAttributesResp PayloadAttributesEvent
-				if len(msg.Data) == 0 {
-					log.Warn("Empty payload_attributes event")
-					return
-				}
-				err := json.Unmarshal(msg.Data, &payloadAttributesResp)
-				if err != nil {
-					log.Error("Could not unmarshal payload_attributes event", "err", err)
-					return
-				}
-
-				select {
-				case payloadAttrC <- payloadAttributesResp:
-				case <-ctx.Done():
-					log.Info("Context completed during event processing")
-					return
-				}
-			})
-
-			if err != nil {
-				log.Error("Failed to subscribe to payload_attributes events", "err", err)
-				if ctx.Err() != nil {
-					log.Info("Context error detected, stopping retries")
-					return
-				}
-				// Wait before retrying to avoid hammering the server on immediate reconnects
-				time.Sleep(1 * time.Second)
-				continue
-			}
-		}
-
-		log.Warn("SubscribeRawWithContext ended unexpectedly, reconnecting")
+func subscribeToPayloadAttributesEvents(
+	ctx context.Context,
+	endpoint string,
+	payloadAttrC chan eth2apiv1.PayloadAttributesEvent,
+) error {
+	provider, err := newEth2EventsProvider(ctx, endpoint)
+	if err != nil {
+		return err
 	}
-	log.Error("Failed to subscribe to payload_attributes events after retries")
+	log.Debug("Subscribing to payload_attributes events")
+	return provider.Events(ctx, []string{"payload_attributes"}, func(event *eth2apiv1.Event) {
+		if data, ok := event.Data.(*eth2apiv1.PayloadAttributesEvent); ok {
+			payloadAttrC <- *data
+		} else {
+			log.Error("Unexpected data type", "type", fmt.Sprintf("%T", event.Data))
+		}
+	})
 }
 
 func getValidatorForSlot(ctx context.Context, relayUrl string, nextSlot uint64) (ValidatorData, error) {
@@ -72,8 +47,10 @@ func getValidatorForSlot(ctx context.Context, relayUrl string, nextSlot uint64) 
 		return ValidatorData{}, fmt.Errorf("could not prepare request: %w", err)
 	}
 
-	// Execute request
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return ValidatorData{}, err
 	}
@@ -118,4 +95,26 @@ func getValidatorForSlot(ctx context.Context, relayUrl string, nextSlot uint64) 
 	}
 
 	return v, nil
+}
+
+func newEth2EventsProvider(ctx context.Context, endpoint string) (eth2client.EventsProvider, error) {
+	client, err := newEth2HttpClient(ctx, endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if provider, isProvider := client.(eth2client.EventsProvider); isProvider {
+		return provider, nil
+	}
+	return nil, errors.New("client does not support event subscriptions")
+}
+
+func newEth2HttpClient(ctx context.Context, endpoint string) (eth2client.Service, error) {
+	client, err := eth2http.New(ctx,
+		eth2http.WithAddress(endpoint),
+		eth2http.WithLogLevel(zerolog.WarnLevel),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
+	return client, nil
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	eth2apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -49,13 +50,13 @@ func (bs *BeaconSidecar) startSyncing(ctx context.Context, beaconRpc string, boo
 	defer bs.cancel()
 
 	bs.wg.Add(1)
-	payloadAttrC := make(chan PayloadAttributesEvent)
-	go SubscribeToPayloadAttributesEvents(ctx, beaconRpc, payloadAttrC)
+	payloadAttrC := make(chan eth2apiv1.PayloadAttributesEvent)
+	go subscribeToPayloadAttributesEvents(ctx, beaconRpc, payloadAttrC)
 
 	for paEvent := range payloadAttrC {
 		log.Debug("New PA event", "data", paEvent.Data)
 
-		validatorData, err := getValidatorForSlot(ctx, boostRelayUrl, paEvent.Data.ProposalSlot)
+		validatorData, err := getValidatorForSlot(ctx, boostRelayUrl, uint64(paEvent.Data.ProposalSlot))
 		if err != nil {
 			log.Warn("could not get validator", "slot", paEvent.Data.ProposalSlot, "err", err)
 			continue

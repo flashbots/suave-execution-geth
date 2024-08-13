@@ -3,7 +3,7 @@ package beacon_sidecar
 import (
 	"encoding/json"
 
-	"github.com/attestantio/go-eth2-client/spec/capella"
+	eth2apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,19 +22,19 @@ type BeaconBuildBlockArgs struct {
 	ParentBlockRoot common.Hash
 }
 
-func NewBeaconBuildBlockArgsFromValAndPAEvent(valData ValidatorData, paEvent PayloadAttributesEvent) BeaconBuildBlockArgs {
+func NewBeaconBuildBlockArgsFromValAndPAEvent(valData ValidatorData, paEvent eth2apiv1.PayloadAttributesEvent) BeaconBuildBlockArgs {
 	beaconBuildBlockArgs := BeaconBuildBlockArgs{
-		Slot:            paEvent.Data.ProposalSlot,
+		Slot:            uint64(paEvent.Data.ProposalSlot),
 		ProposerPubkey:  hexutil.MustDecode(valData.Pubkey),
-		Parent:          paEvent.Data.ParentBlockHash,
-		Timestamp:       paEvent.Data.PayloadAttributes.Timestamp,
-		Random:          paEvent.Data.PayloadAttributes.PrevRandao,
+		Parent:          common.Hash(paEvent.Data.ParentBlockHash),
+		Timestamp:       paEvent.Data.V3.Timestamp,
+		Random:          paEvent.Data.V3.PrevRandao,
 		FeeRecipient:    valData.FeeRecipient,
 		GasLimit:        valData.GasLimit,
-		ParentBlockRoot: paEvent.Data.PayloadAttributes.ParentBeaconBlockRoot,
+		ParentBlockRoot: common.Hash(paEvent.Data.V3.ParentBeaconBlockRoot),
 	}
 
-	for _, w := range paEvent.Data.PayloadAttributes.Withdrawals {
+	for _, w := range paEvent.Data.V3.Withdrawals {
 		withdrawal := types.Withdrawal{
 			Index:     uint64(w.Index),
 			Validator: uint64(w.ValidatorIndex),
@@ -89,25 +89,6 @@ func (b *BeaconBuildBlockArgs) ToBuildBlockArgs() api.BuildBlockArgs {
 
 func (b BeaconBuildBlockArgs) Bytes() ([]byte, error) {
 	return json.Marshal(b)
-}
-
-type PayloadAttributesEvent struct {
-	Version string                     `json:"version"`
-	Data    PayloadAttributesEventData `json:"data"`
-}
-
-type PayloadAttributesEventData struct {
-	ProposalSlot      uint64            `json:"proposal_slot,string"`
-	ParentBlockHash   common.Hash       `json:"parent_block_hash"`
-	PayloadAttributes PayloadAttributes `json:"payload_attributes"`
-}
-
-type PayloadAttributes struct {
-	Timestamp             uint64                `json:"timestamp,string"`
-	PrevRandao            common.Hash           `json:"prev_randao"`
-	SuggestedFeeRecipient common.Address        `json:"suggested_fee_recipient"`
-	ParentBeaconBlockRoot common.Hash           `json:"parent_beacon_block_root"`
-	Withdrawals           []*capella.Withdrawal `json:"withdrawals"`
 }
 
 type ValidatorData struct {
